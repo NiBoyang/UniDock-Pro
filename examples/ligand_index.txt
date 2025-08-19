@@ -1,0 +1,9 @@
+./ligands/decoys-1389.pdbqt
+./ligands/decoys-2322.pdbqt
+./ligands/decoys-127.pdbqt
+./ligands/decoys-75.pdbqt
+./ligands/decoys-1285.pdbqt
+./ligands/decoys-4439.pdbqt
+./ligands/decoys-2090.pdbqt
+./ligands/decoys-4166.pdbqt
+./ligands/decoys-4070.pdbqt

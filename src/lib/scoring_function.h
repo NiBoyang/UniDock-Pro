@@ -1,0 +1,118 @@
+#ifndef VINA_SCORING_FUNCTION_H
+#define VINA_SCORING_FUNCTION_H
+
+#include <stdlib.h>
+#include <list>
+#include "atom.h"
+#include "conf_independent.h"
+#include "potentials.h"
+#include "common.h"
+
+// Forward declaration
+struct model;
+
+enum scoring_function_choice { SF_VINA, SF_VINARDO };
+
+class ScoringFunction {
+public:
+    ScoringFunction() {
+        m_num_potentials = 0;
+        m_num_conf_independents = 0;
+        m_sf_choice = 0;
+    }
+    ScoringFunction(const scoring_function_choice sf_choice, const flv& weights) {
+        switch (sf_choice) {
+            case SF_VINA: {
+                m_potentials.push_back(new vina_gaussian(0, 0.5, 8.0));
+                m_potentials.push_back(new vina_gaussian(3, 2.0, 8.0));
+                m_potentials.push_back(new vina_repulsion(0.0, 8.0));
+                m_potentials.push_back(new vina_hydrophobic(0.5, 1.5, 8.0));
+                m_potentials.push_back(new vina_non_dir_h_bond(-0.7, 0, 8.0));
+                m_potentials.push_back(new linearattraction(20.0));
+                m_conf_independents.push_back(new num_tors_div());
+                m_atom_typing = atom_type::XS;
+                m_cutoff = 8.0;
+                m_max_cutoff = 8.0;
+                m_sf_choice = SF_VINA;
+                break;
+            }
+            case SF_VINARDO: {
+                m_potentials.push_back(new vinardo_gaussian(0, 0.8, 8.0));
+                m_potentials.push_back(new vinardo_repulsion(0, 8.0));
+                m_potentials.push_back(new vinardo_hydrophobic(0, 2.5, 8.0));
+                m_potentials.push_back(new vinardo_non_dir_h_bond(-0.6, 0, 8.0));
+                m_potentials.push_back(new linearattraction(20.0));
+                m_conf_independents.push_back(new num_tors_div());
+                m_atom_typing = atom_type::XS;
+                m_cutoff = 8.0;
+                m_max_cutoff = 8.0;
+                m_sf_choice = SF_VINARDO;
+                break;
+            }
+            default: {
+                VINA_CHECK(false);
+                break;
+            }
+        }
+        m_num_potentials = m_potentials.size();
+        m_num_conf_independents = m_conf_independents.size();
+        m_weights = weights;
+    };
+    void Destroy() {
+        for (auto p : m_potentials) {
+            delete p;
+        }
+        m_potentials.clear();
+        m_num_potentials = 0;
+        for (auto p : m_conf_independents) {
+            delete p;
+        }
+        m_conf_independents.clear();
+        m_num_conf_independents = 0;
+    }
+    ~ScoringFunction() { Destroy(); }
+    fl eval(atom& a, atom& b, fl r) const {  // intentionally not checking for cutoff
+        fl acc = 0;
+        VINA_FOR(i, m_num_potentials) { acc += m_weights[i] * m_potentials[i]->eval(a, b, r); }
+        return acc;
+    };
+    fl eval(sz t1, sz t2, fl r) const {
+        fl acc = 0;
+        VINA_FOR(i, m_num_potentials) { acc += m_weights[i] * m_potentials[i]->eval(t1, t2, r); }
+        return acc;
+    };
+    fl conf_independent(const model& m, fl e) const {
+        // Iterator for weights
+        flv::const_iterator it = m_weights.begin() + m_num_potentials;
+        conf_independent_inputs in(
+            m);  // FIXME quite inefficient, but I think speed is irrelevant here, right?
+        VINA_FOR(i, m_num_conf_independents) {
+            // We don't accumulate energy. Why? I don't know...
+            e = m_conf_independents[i]->eval(in, e, it);
+        }
+        assert(it == m_weights.end());
+        return e;
+    };
+    fl get_cutoff() const { return m_cutoff; }
+    fl get_max_cutoff() const { return m_max_cutoff; }
+    atom_type::t get_atom_typing() const { return m_atom_typing; }
+    szv get_atom_types() const {
+        szv tmp;
+        VINA_FOR(i, num_atom_types(m_atom_typing)) { tmp.push_back(i); }
+        return tmp;
+    };
+    sz get_num_atom_types() const { return num_atom_types(m_atom_typing); }
+    flv get_weights() const { return m_weights; }
+
+    std::vector<Potential*> m_potentials;
+    std::vector<ConfIndependent*> m_conf_independents;
+    flv m_weights;
+    fl m_cutoff;
+    fl m_max_cutoff;
+    int m_num_potentials;
+    int m_num_conf_independents;
+    atom_type::t m_atom_typing;
+    int m_sf_choice;  // 0:vina, 1:vinardo
+};
+
+#endif
