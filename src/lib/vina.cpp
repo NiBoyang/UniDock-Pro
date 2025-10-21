@@ -6,6 +6,7 @@
 #include <iomanip>   // for std::setprecision, std::setw
 #include <unordered_map>
 #include <functional>
+#include <cmath>
 
 void debug_write_grids_to_text(const std::string &filename_prefix,
                                const cache &mygrid,
@@ -691,6 +692,7 @@ void Vina::compute_ligand_maps(cache& ligand_grid, const model& known_ligand_mod
 
 void Vina::combine_grids(cache& receptor_grid, const cache& ligand_grid,
                          double w_receptor, double w_ligand) {
+    const double zero_tolerance = 1e-12;
     szv needed_types = m_scoring_function->get_atom_types();
     for(sz t : needed_types) {
         if(!receptor_grid.is_atom_type_grid_initialized(t)) continue;
@@ -708,7 +710,16 @@ void Vina::combine_grids(cache& receptor_grid, const cache& ligand_grid,
                 for(sz iz=0; iz<Nz; iz++){
                     double rec_val = rec_data(ix, iy, iz);
                     double lig_val = lig_data(ix, iy, iz);
-                    double combined = w_receptor*rec_val + w_ligand*lig_val;
+
+                    if (hybrid_mode) {
+                        bool receptor_is_zero = std::fabs(rec_val) <= zero_tolerance;
+                        if (receptor_is_zero && lig_val < 0.0) {
+                            rec_data(ix, iy, iz) = 0.0;
+                            continue;
+                        }
+                    }
+
+                    double combined = w_receptor * rec_val + w_ligand * lig_val;
                     rec_data(ix, iy, iz) = combined;
                 }
             }
@@ -854,11 +865,14 @@ std::string Vina::vina_remarks(const model& m, output_type& pose, fl lb, fl ub) 
     remark.setf(std::ios::fixed, std::ios::floatfield);
     remark.setf(std::ios::showpoint);
 
-    remark << "REMARK VINA RESULT: " << std::setw(9) << std::setprecision(3) << pose.e << "  "
+    const double inter_plus_intra = pose.inter + pose.intra;
+
+    remark << "REMARK VINA RESULT: " << std::setw(9) << std::setprecision(3) << inter_plus_intra << "  "
            << std::setw(9) << std::setprecision(3) << lb << "  " << std::setw(9)
            << std::setprecision(3) << ub << '\n';
 
-    remark << "REMARK INTER + INTRA:    " << std::setw(12) << std::setprecision(3) << pose.total
+    remark << "REMARK INTER + INTRA:    " << std::setw(12) << std::setprecision(3)
+           << inter_plus_intra
            << "\n";
     remark << "REMARK INTER:            " << std::setw(12) << std::setprecision(3) << pose.inter
            << "\n";
