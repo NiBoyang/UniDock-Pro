@@ -264,8 +264,8 @@ public:
 
             if (m_verbosity > 0) {
                 std::cout << '\n';
-                std::cout << "mode |   affinity | dist from best mode\n";
-                std::cout << "     | (kcal/mol) | rmsd l.b.| rmsd u.b.\n";
+                std::cout << "mode |    score    | dist from best mode\n";
+                std::cout << "     |  (kcal/mol) | rmsd l.b.| rmsd u.b.\n";
                 std::cout << "-----+------------+----------+----------\n";
             }
 
@@ -279,7 +279,7 @@ public:
 
                 if (m_verbosity > 0) {
                     std::cout << std::setw(4) << i + 1 << "    " << std::setw(9)
-                              << std::setprecision(4) << poses[i].e;
+                              << std::setprecision(4) << poses[i].total;
                     std::cout << "  " << std::setw(9) << std::setprecision(4) << poses[i].lb;
                     std::cout << "  " << std::setw(9) << std::setprecision(4) << poses[i].ub
                               << "\n";

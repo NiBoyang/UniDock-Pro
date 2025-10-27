@@ -867,72 +867,59 @@ std::string Vina::vina_remarks(const model& m, output_type& pose, fl lb, fl ub) 
 
     const double inter_plus_intra = pose.inter + pose.intra;
 
+    // Only keep the VINA RESULT remark in PDBQT output
     remark << "REMARK VINA RESULT: " << std::setw(9) << std::setprecision(3) << inter_plus_intra << "  "
            << std::setw(9) << std::setprecision(3) << lb << "  " << std::setw(9)
            << std::setprecision(3) << ub << '\n';
 
-    remark << "REMARK INTER + INTRA:    " << std::setw(12) << std::setprecision(3)
-           << inter_plus_intra
-           << "\n";
-    remark << "REMARK INTER:            " << std::setw(12) << std::setprecision(3) << pose.inter
-           << "\n";
-    remark << "REMARK INTRA:            " << std::setw(12) << std::setprecision(3) << pose.intra
-           << "\n";
-    remark << "REMARK UNBOUND:          " << std::setw(12) << std::setprecision(3) << pose.unbound
-           << "\n";
+    // // Convert AD/XS types to SM types - for future use
+    // std::string sm_types_values_str = "";
+    // bool first_sm_type = true;
 
-    // --- 新增逻辑开始 ---
-    std::string sm_types_values_str = "";
-    bool first_sm_type = true;
+    // VINA_FOR_IN(i, m.ligands) {
+    //     const ligand& lig = m.ligands[i];
+    //     VINA_FOR_IN(j, lig.cont) {
+    //         const parsed_line& p_line = lig.cont[j];
+    //         if (p_line.second) {
+    //             sz atom_idx = p_line.second.get();
+    //             if (atom_idx < m.atoms.size()) {
+    //                 sz sm_type = m.atoms[atom_idx].sm;
+    //                 if (!first_sm_type) {
+    //                     sm_types_values_str += " ";
+    //                 }
+    //                 sm_types_values_str += std::to_string(sm_type);
+    //                 first_sm_type = false;
+    //             } else {
+    //                 std::cerr << "DEBUG: Invalid atom index " << atom_idx << " >= " << m.atoms.size() << std::endl;
+    //             }
+    //         }
+    //     }
+    // }
 
-    
-    // 遍历配体原子
-    VINA_FOR_IN(i, m.ligands) {
-        const ligand& lig = m.ligands[i];
-        VINA_FOR_IN(j, lig.cont) {
-            const parsed_line& p_line = lig.cont[j];
-            if (p_line.second) { // 这是一个原子行
-                sz atom_idx = p_line.second.get();
-                if (atom_idx < m.atoms.size()) { // 确保索引有效
-                    sz sm_type = m.atoms[atom_idx].sm;
-                    if (!first_sm_type) {
-                        sm_types_values_str += " ";
-                    }
-                    sm_types_values_str += std::to_string(sm_type);
-                    first_sm_type = false;
-                } else {
-                    std::cerr << "DEBUG: Invalid atom index " << atom_idx << " >= " << m.atoms.size() << std::endl;
-                }
-            }
-        }
-    }
+    // if (m.num_flex() > 0) {
+    //     std::cerr << "DEBUG: Processing flex context, size = " << m.flex_context.size() << std::endl;
+    //     VINA_FOR_IN(i, m.flex_context) {
+    //         const parsed_line& p_line = m.flex_context[i];
+    //         if (p_line.second) { 
+    //             sz atom_idx = p_line.second.get();
+    //             if (atom_idx < m.atoms.size()) {
+    //                 sz sm_type = m.atoms[atom_idx].sm;
+    //                 std::cerr << "DEBUG: flex atom[" << atom_idx << "].sm = " << sm_type << std::endl;
+    //                 if (!first_sm_type) {
+    //                     sm_types_values_str += " ";
+    //                 }
+    //                 sm_types_values_str += std::to_string(sm_type);
+    //                 first_sm_type = false;
+    //             }
+    //         }
+    //     }
+    // }
 
-    // 遍历柔性残基原子 (如果存在)
-    if (m.num_flex() > 0) {
-        std::cerr << "DEBUG: Processing flex context, size = " << m.flex_context.size() << std::endl;
-        VINA_FOR_IN(i, m.flex_context) {
-            const parsed_line& p_line = m.flex_context[i];
-            if (p_line.second) { // 这是一个原子行
-                sz atom_idx = p_line.second.get();
-                if (atom_idx < m.atoms.size()) { // 确保索引有效
-                    sz sm_type = m.atoms[atom_idx].sm;
-                    std::cerr << "DEBUG: flex atom[" << atom_idx << "].sm = " << sm_type << std::endl;
-                    if (!first_sm_type) {
-                        sm_types_values_str += " ";
-                    }
-                    sm_types_values_str += std::to_string(sm_type);
-                    first_sm_type = false;
-                }
-            }
-        }
-    }
-
-    if (!sm_types_values_str.empty()) {
-        remark << "REMARK SM_TYPES " << sm_types_values_str << '\n';
-    } else {
-        std::cerr << "DEBUG: sm_types_values_str is empty, not adding to remark" << std::endl;
-    }
-    // --- 新增逻辑结束 ---
+    // if (!sm_types_values_str.empty()) {
+    //     remark << "REMARK SM_TYPES " << sm_types_values_str << '\n';
+    // } else {
+    //     std::cerr << "DEBUG: sm_types_values_str is empty, not adding to remark" << std::endl;
+    // }
 
     return remark.str();
 }
@@ -1261,8 +1248,10 @@ void Vina::randomize(const int max_steps) {
 }
 
 void Vina::show_score(const std::vector<double> energies) {
-    std::cout << "Estimated Free Energy of Binding   : " << std::fixed << std::setprecision(3)
-              << energies[0] << " (kcal/mol) [=(1)+(2)+(3)+(4)]\n";
+    // Use unified label 'score' for CLI display
+    const double inter_intra = (energies[1] + energies[2]) + (energies[3] + energies[4] + energies[5]);
+    std::cout << "Score                             : " << std::fixed << std::setprecision(3)
+              << inter_intra << " (kcal/mol)\n";
     std::cout << "(1) Final Intermolecular Energy    : " << std::fixed << std::setprecision(3)
               << energies[1] + energies[2] << " (kcal/mol)\n";
     std::cout << "    Ligand - Receptor              : " << std::fixed << std::setprecision(3)
@@ -1723,8 +1712,8 @@ void Vina::global_search_gpu(const int exhaustiveness, const int n_poses, const 
 
             if (m_verbosity > 0) {
                 std::cout << '\n';
-                std::cout << "mode |   affinity | dist from best mode\n";
-                std::cout << "     | (kcal/mol) | rmsd l.b.| rmsd u.b.\n";
+                std::cout << "mode |    score    | dist from best mode\n";
+                std::cout << "     |  (kcal/mol) | rmsd l.b.| rmsd u.b.\n";
                 std::cout << "-----+------------+----------+----------\n";
             }
 
@@ -1738,7 +1727,7 @@ void Vina::global_search_gpu(const int exhaustiveness, const int n_poses, const 
 
                 if (m_verbosity > 0) {
                     std::cout << std::setw(4) << i + 1 << "    " << std::setw(9)
-                              << std::setprecision(4) << poses[i].e;
+                              << std::setprecision(4) << poses[i].total;
                     std::cout << "  " << std::setw(9) << std::setprecision(4) << poses[i].lb;
                     std::cout << "  " << std::setw(9) << std::setprecision(4) << poses[i].ub
                               << "\n";
