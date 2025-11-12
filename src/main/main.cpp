@@ -10,6 +10,7 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include "types.cuh"
+#include <boost/filesystem.hpp>
 
 struct usage_error : public std::runtime_error {
     usage_error(const std::string& message) : std::runtime_error(message) {}
@@ -651,8 +652,8 @@ bug reporting, license agreements, and more information.      \n";
             exit(EXIT_FAILURE);
         } else if (vm.count("dir")) {
             if (!is_directory(out_dir)) {
-                std::cerr << "ERROR: Directory " << out_dir << " does not exist.\n";
-                exit(EXIT_FAILURE);
+                // Create the output directory if it does not exist
+                boost::filesystem::create_directories(out_dir);
             }
         } else if (vm.count("ligand") && vm.count("dir")) {
             std::cerr << "WARNING: In ligand mode, --dir argument is ignored.\n";
