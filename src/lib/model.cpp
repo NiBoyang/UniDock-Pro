@@ -409,8 +409,7 @@ void model::assign_types() {
         bool hdBonded = bonded_to_HD(a);
         bool heteroBonded = bonded_to_heteroatom(a);
         a.assign_el();
-        a.assign_sm();
-        a.sm = adjust_smina_type(a.sm, hdBonded, heteroBonded);
+        // SM atom type logic removed
         sz& x = a.xs;
 
         bool acceptor = (a.ad == AD_TYPE_OA
@@ -740,18 +739,7 @@ void string_write_coord(sz i, fl x, std::string& str) {
     str[i + j] = out.str()[j];
 }
 
-void string_write_sdf_coord(sz i, fl x, std::string& str) {
-    VINA_CHECK(i > 0);
-    --i;
-    std::ostringstream out;
-    out.setf(std::ios::fixed, std::ios::floatfield);
-    out.setf(std::ios::showpoint);
-    out << std::setw(10) << std::setprecision(4) << x;
-    VINA_CHECK(out.str().size() == 10);
-    VINA_CHECK(str.size() > i + 10);
-    VINA_FOR(j, 10)
-    str[i + j] = out.str()[j];
-}
+// Removed SDF string coordinate writer
 
 std::string coords_to_pdbqt_string(const vec& coords, const std::string& str) {
     std::string tmp(str);
@@ -761,13 +749,7 @@ std::string coords_to_pdbqt_string(const vec& coords, const std::string& str) {
     return tmp;
 }
 
-std::string coords_to_sdf_string(const vec& coords, const std::string& str) {
-    std::string tmp(str);
-    string_write_sdf_coord(1, coords[0], tmp);
-    string_write_sdf_coord(11, coords[1], tmp);
-    string_write_sdf_coord(21, coords[2], tmp);
-    return tmp;
-}
+// Removed SDF coordinate formatting
 
 void model::write_context(const context& c, ofile& out) const {
 #ifdef DEBUG
@@ -782,19 +764,7 @@ void model::write_context(const context& c, ofile& out) const {
     }
 }
 
-void model::write_sdf_context(const context& c, ofile& out) const {
-#ifdef DEBUG
-    verify_bond_lengths();
-#endif
-    VINA_FOR_IN(i, c) {
-        const std::string& str = c[i].first;
-        // TODO: sort by number_sdf
-        if (c[i].second) {
-            out << coords_to_sdf_string(coords[c[i].second.get()], str) << '\n';
-        } else
-            out << str << '\n';
-    }
-}
+// Removed SDF context writer to file
 
 void model::write_context(const context& c, std::ostringstream& out) const {
 #ifdef DEBUG
@@ -810,19 +780,7 @@ void model::write_context(const context& c, std::ostringstream& out) const {
     }
 }
 
-void model::write_sdf_context(const context& c, std::ostringstream& out) const {
-#ifdef DEBUG
-    verify_bond_lengths();
-#endif
-
-    VINA_FOR_IN(i, c) {
-        const std::string& str = c[i].first;
-        if (c[i].second)
-            out << coords_to_sdf_string(coords[c[i].second.get()], str) << '\n';
-        else
-            out << str << '\n';
-    }
-}
+// Removed SDF context writer to string
 
 std::string model::write_model(sz model_number, const std::string& remark) {
     std::ostringstream out;
@@ -840,22 +798,7 @@ std::string model::write_model(sz model_number, const std::string& remark) {
     return out.str();
 }
 
-std::string model::write_sdf_model(sz model_number, const std::string& remark) {
-    std::ostringstream out;
-
-    // out << "MODEL " << model_number << '\n';
-
-    // TODO: sort by number_sdf
-    VINA_FOR_IN(i, ligands)
-    write_sdf_context(ligands[i].cont, out);
-    if (num_flex() > 0)  // otherwise remark is written in vain
-        write_sdf_context(flex_context, out);
-
-    out << remark;
-    out << "$$$$\n";
-
-    return out.str();
-}
+// Removed SDF model writer
 
 void model::set(const conf& c) {
     ligands.set_conf(atoms, coords, c.ligands);

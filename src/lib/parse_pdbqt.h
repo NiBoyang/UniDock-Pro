@@ -20,8 +20,6 @@ model parse_ligand_pdbqt_from_file_no_failure(const std::string &name, atom_type
                                               bool keep_H = false);  // can throw struct_parse_error
 model parse_ligand_from_file_no_failure(const std::string &name, atom_type::t atype,
                                         bool keep_H = false);  // can throw struct_parse_error
-model parse_ligand_sdf_from_file_no_failure(const std::string &name, atom_type::t atype,
-                                            bool keep_H = false);  // can throw struct_parse_error
 
 model parse_ligand_pdbqt_from_string(const std::string &string_name,
                                      atom_type::t atype);  // can exit with code EXIT_FAILURE

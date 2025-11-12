@@ -5,9 +5,9 @@
 #include "triangular_matrix_index.h"
 
 struct atom_type {
-    enum t { EL, AD, XS, SY, SM };
-    sz el, ad, xs, sy, sm;
-    atom_type() : el(EL_TYPE_SIZE), ad(AD_TYPE_SIZE), xs(XS_TYPE_SIZE), sy(SY_TYPE_SIZE), sm(SM_TYPE_SIZE) {}
+    enum t { EL, AD, XS, SY };
+    sz el, ad, xs, sy;
+    atom_type() : el(EL_TYPE_SIZE), ad(AD_TYPE_SIZE), xs(XS_TYPE_SIZE), sy(SY_TYPE_SIZE) {}
     sz get(t atom_typing_used) const {
         switch (atom_typing_used) {
             case EL:
@@ -18,8 +18,6 @@ struct atom_type {
                 return xs;
             case SY:
                 return sy;
-            case SM:
-                return sm;
             default:
                 assert(false);
                 return max_sz;
@@ -49,9 +47,6 @@ struct atom_type {
     fl optimal_covalent_bond_length(const atom_type& x) const {
         return covalent_radius() + x.covalent_radius();
     }
-    void assign_sm() {
-        sm = ad_type_to_sm_type(ad);
-    }
 private:
     friend class boost::serialization::access;
     template <class Archive> void serialize(Archive& ar, const unsigned version) {
@@ -59,7 +54,6 @@ private:
         ar & ad;
         ar & xs;
         ar & sy;
-        ar & sm;
     }
 };
 
@@ -73,8 +67,6 @@ inline sz num_atom_types(atom_type::t atom_typing_used) {
             return XS_TYPE_SIZE;
         case atom_type::SY:
             return SY_TYPE_SIZE;
-        case atom_type::SM:
-            return SM_TYPE_SIZE;
         default:
             assert(false);
             return max_sz;

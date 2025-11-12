@@ -304,9 +304,7 @@ public:
               << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << std::endl;
     }
     std::string get_poses(int how_many = 9, double energy_range = 3.0);
-    std::string get_sdf_poses(int how_many = 9, double energy_range = 3.0);
     std::string get_poses_gpu(int ligand_id, int how_many = 9, double energy_range = 3.0);
-    std::string get_sdf_poses_gpu(int ligand_id, int how_many = 9, double energy_range = 3.0);
     void enable_gpu() { gpu = true; }
     std::vector<std::vector<double> > get_poses_coordinates(int how_many = 9,
                                                             double energy_range = 3.0);
@@ -359,7 +357,6 @@ public:
     std::function<void(double)>* m_progress_callback;
 
     std::string vina_remarks(const model& m, output_type& pose, fl lb, fl ub);
-    std::string sdf_remarks(output_type& pose, fl lb, fl ub);
     output_container remove_redundant(const output_container& in, fl min_rmsd);
 
     void set_forcefield();

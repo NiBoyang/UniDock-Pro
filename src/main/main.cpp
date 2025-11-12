@@ -285,8 +285,7 @@ bug reporting, license agreements, and more information.      \n";
         std::string ligand_index;  // path to a text file, containing paths to ligands files
         std::vector<std::string> batch_ligand_names;
         std::vector<std::string> gpu_batch_ligand_names;
-        // std::vector<std::string> gpu_batch_ligand_names_sdf;
-        bool use_sdf_ligand = false;
+        // SDF support removed
         std::string maps;
         std::string sf_name = "vina";
         std::string search_mode;
@@ -337,7 +336,6 @@ bug reporting, license agreements, and more information.      \n";
         bool autobox = false;
         variables_map vm;
 
-        // sdf
         bool keep_H = true;
 
         // score only in batch
@@ -353,15 +351,13 @@ bug reporting, license agreements, and more information.      \n";
             "flex", value<std::string>(&flex_name), "flexible side chains, if any (PDBQT or PDB)")(
             "ligand", value<std::vector<std::string> >(&ligand_names)->multitoken(),
             "ligand (PDBQT)")("ligand_index", value<std::string>(&ligand_index),
-                              "file containing paths to ligands (PDBQT or SDF")(
+                              "file containing paths to ligands (PDBQT)")(
             "reference_ligand", value<std::string>(),
             "reference ligand for similarity-guided docking (PDBQT)")(
             "batch", value<std::vector<std::string> >(&batch_ligand_names)->multitoken(),
             "batch ligand (PDBQT)")(
             "gpu_batch", value<std::vector<std::string> >(&gpu_batch_ligand_names)->multitoken(),
-            "gpu batch ligand (PDBQT or SDF)")
-            // ("gpu_batch_sdf", value< std::vector<std::string>
-            // >(&gpu_batch_ligand_names_sdf)->multitoken(), "gpu batch ligand (SDF)")
+            "gpu batch ligand (PDBQT)")
 
             ("scoring", value<std::string>(&sf_name)->default_value(sf_name),
              "scoring function (vina or vinardo)");
@@ -444,7 +440,7 @@ bug reporting, license agreements, and more information.      \n";
                         ("weight_glue", value<double>(&weight_glue)->default_value(weight_glue),
                          "macrocycle glue weight")("keep_nonpolar_H",
                                              bool_switch(&keep_H)->default_value(keep_H),
-                                             "keep non polar H in sdf")
+                                             "keep non polar H in input")
 
             ;
         options_description misc("Misc (optional)");
@@ -641,7 +637,7 @@ bug reporting, license agreements, and more information.      \n";
         }
 
         if (!vm.count("ligand") && !vm.count("batch") && !vm.count("gpu_batch")
-            && !vm.count("ligand_index") && !vm.count("gpu_batch_sdf")) {
+            && !vm.count("ligand_index")) {
             std::cerr << desc_simple << "\n\nERROR: Missing ligand(s).\n";
             exit(EXIT_FAILURE);
         } else if (vm.count("ligand") && (vm.count("batch") || vm.count("gpu_batch"))) {

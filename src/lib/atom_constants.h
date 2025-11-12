@@ -121,40 +121,6 @@ const sz SY_TYPE_I = 16;
 const sz SY_TYPE_Met = 17;
 const sz SY_TYPE_SIZE = 18;
 
-// SMINA type
-const sz SM_TYPE_H                       =  0;
-const sz SM_TYPE_HD                      =  1;
-const sz SM_TYPE_C                       =  2;
-const sz SM_TYPE_CP                      =  3;
-const sz SM_TYPE_A                       =  4;
-const sz SM_TYPE_AP                      =  5;
-const sz SM_TYPE_N                       =  6;
-const sz SM_TYPE_ND                      =  7;
-const sz SM_TYPE_NDA                     =  8;
-const sz SM_TYPE_NA                      =  9;
-const sz SM_TYPE_O                       = 10;
-const sz SM_TYPE_OD                      = 11;
-const sz SM_TYPE_ODA                     = 12;
-const sz SM_TYPE_OA                      = 13;
-const sz SM_TYPE_S                       = 14;
-const sz SM_TYPE_SA                      = 15;
-const sz SM_TYPE_P                       = 16;
-const sz SM_TYPE_F                       = 17;
-const sz SM_TYPE_Cl                      = 18;
-const sz SM_TYPE_Br                      = 19;
-const sz SM_TYPE_I                       = 20;
-const sz SM_TYPE_Mg                      = 21;
-const sz SM_TYPE_Mn                      = 22;
-const sz SM_TYPE_Zn                      = 23;
-const sz SM_TYPE_Ca                      = 24;
-const sz SM_TYPE_Fe                      = 25;
-const sz SM_TYPE_Met                     = 26;
-const sz SM_TYPE_B                       = 27;
-const sz SM_TYPE_OXA                     = 28;
-const sz SM_TYPE_NXA                     = 29;
-const sz SM_TYPE_OXD                     = 30;
-const sz SM_TYPE_NXD                     = 31;
-const sz SM_TYPE_SIZE                    = 32;
 
 struct atom_kind {
     std::string name;
@@ -414,10 +380,7 @@ struct xs_lj_params {
     fl LJ_B;
 };
 
-struct sm_lj_params {
-    fl LJ_A;
-    fl LJ_B;
-};
+// Removed SM LJ params
 
 const xs_lj_params xs_lj_params_data[] = {
     {0.40, 1.00}, // C_H
@@ -456,43 +419,10 @@ const xs_lj_params xs_lj_params_data[] = {
     {0.88, 2.20}, // N_XA
     {0.80, 2.00}, // O_XD
     {0.88, 2.20}, // N_XD
-    {0.60, 1.40}  // B - NEW (using SM_TYPE_B params)
+    {0.60, 1.40}  // B - NEW
 };
 
-const sm_lj_params sm_lj_params_data[] = {
-    {0.08, 0.60}, // H
-    {0.12, 0.80}, // HD
-    {0.40, 1.20}, // C
-    {0.40, 1.00}, // CP
-    {0.48, 1.40}, // A
-    {0.48, 1.20}, // AP
-    {0.48, 1.40}, // N
-    {0.60, 1.60}, // ND
-    {0.68, 1.80}, // NDA
-    {0.56, 1.60}, // NA
-    {0.72, 1.80}, // O
-    {0.80, 2.00}, // OD
-    {0.88, 2.20}, // ODA
-    {0.80, 2.00}, // OA
-    {1.00, 2.40}, // S
-    {1.12, 2.60}, // SA
-    {0.88, 2.20}, // P
-    {0.48, 1.20}, // F
-    {0.64, 1.60}, // Cl
-    {0.72, 1.80}, // Br
-    {0.88, 2.20}, // I
-    {0.40, 1.00}, // Mg
-    {0.48, 1.12}, // Mn
-    {0.60, 1.40}, // Zn
-    {0.60, 1.40}, // Ca
-    {0.56, 1.28}, // Fe
-    {0.56, 1.20}, // Met
-    {0.60, 1.40}, // B
-    {0.80, 2.00}, // OXA
-    {0.56, 1.60}, // NXA
-    {0.80, 2.00}, // OXD
-    {0.60, 1.60} // NXD
-};
+// Removed SM LJ params data
 
 inline xs_lj_params xs_lj(sz t) {
     assert(sizeof(xs_lj_params_data) / sizeof(const xs_lj_params) == XS_TYPE_SIZE);
@@ -500,11 +430,7 @@ inline xs_lj_params xs_lj(sz t) {
     return xs_lj_params_data[t];
 }
 
-inline sm_lj_params sm_lj(sz t) {
-    assert(sizeof(sm_lj_params_data) / sizeof(const sm_lj_params) == SM_TYPE_SIZE);
-    assert(t < sizeof(sm_lj_params_data) / sizeof(const sm_lj_params));
-    return sm_lj_params_data[t];
-}
+// Removed SM LJ accessor
 
 inline fl xs_radius(sz t) {
     assert(sizeof(xs_vdw_radii) / sizeof(const fl) == XS_TYPE_SIZE);
@@ -585,77 +511,6 @@ inline fl max_covalent_radius() {
     return tmp;
 }
 
-inline sz ad_type_to_sm_type(sz t) {
-	switch(t) {
-		case AD_TYPE_C    : return SM_TYPE_C;
-		case AD_TYPE_A    : return SM_TYPE_A;
-		case AD_TYPE_N    : return SM_TYPE_N;
-		case AD_TYPE_O    : return SM_TYPE_O;
-		case AD_TYPE_P    : return SM_TYPE_P;
-		case AD_TYPE_S    : return SM_TYPE_S;
-		case AD_TYPE_H    : return SM_TYPE_H;
-		case AD_TYPE_F    : return SM_TYPE_F;
-		case AD_TYPE_I    : return SM_TYPE_I;
-		case AD_TYPE_NA   : return SM_TYPE_NDA;
-		case AD_TYPE_OA   : return SM_TYPE_ODA;
-		case AD_TYPE_SA   : return SM_TYPE_SA;
-		case AD_TYPE_HD   : return SM_TYPE_HD;
-		case AD_TYPE_Mg   : return SM_TYPE_Mg;
-		case AD_TYPE_Mn   : return SM_TYPE_Mn;
-		case AD_TYPE_Zn   : return SM_TYPE_Zn;
-		case AD_TYPE_Ca   : return SM_TYPE_Ca;
-		case AD_TYPE_Fe   : return SM_TYPE_Fe;
-		case AD_TYPE_Cl   : return SM_TYPE_Cl;
-		case AD_TYPE_Br   : return SM_TYPE_Br;
-		case AD_TYPE_Si   : return SM_TYPE_Met;
-		case AD_TYPE_At   : return SM_TYPE_Met;
-		case AD_TYPE_CG0  : return SM_TYPE_C; // I did it in a different way. In SMINA they were converted to generic metal.
-		case AD_TYPE_CG1  : return SM_TYPE_C;
-		case AD_TYPE_CG2  : return SM_TYPE_C;
-		case AD_TYPE_CG3  : return SM_TYPE_C;
-		case AD_TYPE_G0   : return SM_TYPE_Met;
-		case AD_TYPE_G1   : return SM_TYPE_Met;
-		case AD_TYPE_G2   : return SM_TYPE_Met;
-		case AD_TYPE_G3   : return SM_TYPE_Met;
-		case AD_TYPE_W    : return SM_TYPE_Met;
-        case AD_TYPE_OXA  : return SM_TYPE_OXA; //Specific for unidock
-        case AD_TYPE_NXA  : return SM_TYPE_NXA; //Specific for unidock
-        case AD_TYPE_OXD  : return SM_TYPE_OXD; //Specific for unidock
-        case AD_TYPE_NXD  : return SM_TYPE_NXD; //Specific for unidock
-        case AD_TYPE_B    : return SM_TYPE_B;   // NEW - maps to existing SM_TYPE_B
-		case AD_TYPE_SIZE : return SM_TYPE_SIZE;
-		default: VINA_CHECK(false);
-	}
-	return SM_TYPE_SIZE;
-}
-
-inline sz adjust_smina_type(sz t, bool Hbonded, bool heteroBonded) {
-  switch (t) {
-  case SM_TYPE_C: // C_C_C_H, //hydrophobic according to xscale
-  case SM_TYPE_CP: //C_C_C_P,
-    return
-        heteroBonded ?
-            SM_TYPE_CP : SM_TYPE_C;
-  case SM_TYPE_A: //C_A_C_H,
-  case SM_TYPE_AP: //C_A_C_P,
-    return
-        heteroBonded ?
-            SM_TYPE_AP : SM_TYPE_A;
-  case SM_TYPE_ND: //N_N_N_D,
-  case SM_TYPE_N: //N_N_N_P, no hydrogen bonding
-    return Hbonded ? SM_TYPE_ND : SM_TYPE_N;
-  case SM_TYPE_NDA: //N_NA_N_DA, also an autodock acceptor
-  case SM_TYPE_NA: //N_NA_N_A, also considered an acceptor by autodock
-    return Hbonded ? SM_TYPE_NDA : SM_TYPE_NA;
-  case SM_TYPE_OD: //O_O_O_D,
-  case SM_TYPE_O: //O_O_O_P,
-    return Hbonded ? SM_TYPE_OD : SM_TYPE_O;
-  case SM_TYPE_ODA: //O_OA_O_DA, also an autodock acceptor
-  case SM_TYPE_OA: //O_OA_O_A, also an autodock acceptor
-    return Hbonded ? SM_TYPE_ODA : SM_TYPE_OA;
-  default:
-    return t;
-  }
-}
+// Removed SM type mappings and adjustments
 
 #endif
