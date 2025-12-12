@@ -8,76 +8,6 @@
 #include <functional>
 #include <cmath>
 
-void debug_write_grids_to_text(const std::string &filename_prefix,
-                               const cache &mygrid,
-                               const szv &types)
-{
-    // For each atom type
-    for (sz t : types) {
-        // Skip if not actually initialized
-        if(!mygrid.is_atom_type_grid_initialized(t)) 
-            continue;
-
-        // Construct a file name based on prefix + atom_type number
-        std::ostringstream fname;
-        fname << filename_prefix << "_type" << t << ".txt";
-
-        std::ofstream ofs(fname.str().c_str());
-        if(!ofs) {
-            std::cerr << "Cannot open file " << fname.str()
-                      << " for writing grid data.\n";
-            continue;
-        }
-
-        // Retrieve Nx, Ny, Nz from the grid
-        sz Nx = mygrid.dim(0);
-        sz Ny = mygrid.dim(1);
-        sz Nz = mygrid.dim(2);
-
-        // Access the grid array for type t
-        const array3d<fl> &data = mygrid.get_array3d_const_ref(t);
-
-        // Write them out, one line per point
-        // Format: x-index, y-index, z-index, energy
-        for(sz ix = 0; ix < Nx; ix++) {
-            for(sz iy = 0; iy < Ny; iy++) {
-                for(sz iz = 0; iz < Nz; iz++) {
-                    fl val = data(ix, iy, iz);
-                    ofs << ix << " " << iy << " " << iz << " "
-                        << std::setw(10) << std::setprecision(6) << val << "\n";
-                }
-            }
-        }
-
-        ofs.close();
-        std::cerr << "Wrote grid data to " << fname.str() << "\n";
-    }
-}
-
-void Vina::cite() {
-    const std::string cite_message
-        = "\
-#################################################################\n\
-# If you used AutoDock Vina in your work, please cite:          #\n\
-#                                                               #\n\
-# J. Eberhardt, D. Santos-Martins, A. F. Tillack, and S. Forli  #\n\
-# AutoDock Vina 1.2.0: New Docking Methods, Expanded Force      #\n\
-# Field, and Python Bindings, J. Chem. Inf. Model. (2021)       #\n\
-# DOI 10.1021/acs.jcim.1c00203                                  #\n\
-#                                                               #\n\
-# O. Trott, A. J. Olson,                                        #\n\
-# AutoDock Vina: improving the speed and accuracy of docking    #\n\
-# with a new scoring function, efficient optimization and       #\n\
-# multithreading, J. Comp. Chem. (2010)                         #\n\
-# DOI 10.1002/jcc.21334                                         #\n\
-#                                                               #\n\
-# Please see https://github.com/ccsb-scripps/AutoDock-Vina for  #\n\
-# more information.                                             #\n\
-#################################################################\n";
-
-    std::cout << cite_message << '\n';
-}
-
 int Vina::generate_seed(const int seed) {
     // Seed generator, if the global seed (m_seed) was defined to 0
     // it seems that we want to generate random seed, otherwise it means
@@ -865,66 +795,12 @@ std::string Vina::vina_remarks(const model& m, output_type& pose, fl lb, fl ub) 
     remark.setf(std::ios::fixed, std::ios::floatfield);
     remark.setf(std::ios::showpoint);
 
-    const double inter_plus_intra = pose.inter + pose.intra;
-
-    // Only keep the VINA RESULT remark in PDBQT output
-    remark << "REMARK VINA RESULT: " << std::setw(9) << std::setprecision(3) << inter_plus_intra << "  "
+    remark << "REMARK VINA RESULT: " << std::setw(9) << std::setprecision(3) << pose.total << "  "
            << std::setw(9) << std::setprecision(3) << lb << "  " << std::setw(9)
            << std::setprecision(3) << ub << '\n';
 
-    // // Convert AD/XS types to SM types - for future use
-    // std::string sm_types_values_str = "";
-    // bool first_sm_type = true;
-
-    // VINA_FOR_IN(i, m.ligands) {
-    //     const ligand& lig = m.ligands[i];
-    //     VINA_FOR_IN(j, lig.cont) {
-    //         const parsed_line& p_line = lig.cont[j];
-    //         if (p_line.second) {
-    //             sz atom_idx = p_line.second.get();
-    //             if (atom_idx < m.atoms.size()) {
-    //                 sz sm_type = m.atoms[atom_idx].sm;
-    //                 if (!first_sm_type) {
-    //                     sm_types_values_str += " ";
-    //                 }
-    //                 sm_types_values_str += std::to_string(sm_type);
-    //                 first_sm_type = false;
-    //             } else {
-    //                 std::cerr << "DEBUG: Invalid atom index " << atom_idx << " >= " << m.atoms.size() << std::endl;
-    //             }
-    //         }
-    //     }
-    // }
-
-    // if (m.num_flex() > 0) {
-    //     std::cerr << "DEBUG: Processing flex context, size = " << m.flex_context.size() << std::endl;
-    //     VINA_FOR_IN(i, m.flex_context) {
-    //         const parsed_line& p_line = m.flex_context[i];
-    //         if (p_line.second) { 
-    //             sz atom_idx = p_line.second.get();
-    //             if (atom_idx < m.atoms.size()) {
-    //                 sz sm_type = m.atoms[atom_idx].sm;
-    //                 std::cerr << "DEBUG: flex atom[" << atom_idx << "].sm = " << sm_type << std::endl;
-    //                 if (!first_sm_type) {
-    //                     sm_types_values_str += " ";
-    //                 }
-    //                 sm_types_values_str += std::to_string(sm_type);
-    //                 first_sm_type = false;
-    //             }
-    //         }
-    //     }
-    // }
-
-    // if (!sm_types_values_str.empty()) {
-    //     remark << "REMARK SM_TYPES " << sm_types_values_str << '\n';
-    // } else {
-    //     std::cerr << "DEBUG: sm_types_values_str is empty, not adding to remark" << std::endl;
-    // }
-
     return remark.str();
 }
-
-// Removed SDF remarks
 
 std::string Vina::get_poses(int how_many, double energy_range) {
     int n = 0;
@@ -1027,12 +903,10 @@ std::string Vina::get_poses_gpu(int ligand_id, int how_many, double energy_range
     } else {
         std::cerr << "WARNING: Could not find any poses. No poses were written.\n";
     }
-    // DEBUG_PRINTF("out poses: %s\n", out.str());
 
     return out.str();
 }
 
-// Removed SDF pose generation (GPU)
 
 void Vina::write_poses(const std::string& output_name, int how_many, double energy_range) {
     std::string out;
@@ -1054,7 +928,6 @@ void Vina::write_poses_gpu(const std::vector<std::string>& gpu_output_name, int 
     std::string out;
     VINA_RANGE(i, 0, gpu_output_name.size()) {
         if (!m_poses_gpu[i].empty()) {
-            // Open output file
             ofile f(make_path(gpu_output_name[i]));
             out = get_poses_gpu(i, how_many, energy_range);
             f << out;
@@ -1558,11 +1431,8 @@ void Vina::global_search_gpu(const int exhaustiveness, const int n_poses, const 
 
                 m_model_gpu[l].set(poses[i].c);
 
-                // m_model = m_model_gpu[l]; // Vina::score() will use m_model and
-                // m_precalculated_byatom m_precalculated_byatom = m_precalculated_byatom_gpu[l];
                 DEBUG_PRINTF("intramolecular_energy=%f\n", intramolecular_energy);
                 std::vector<double> energies = score_gpu(l, intramolecular_energy);
-                // DEBUG_PRINTF("energies.size()=%d\n", energies.size());
                 // Store energy components in current pose
                 poses[i].e = energies[0];  // specific to each scoring function
                 poses[i].inter = energies[1] + energies[2];
@@ -1624,7 +1494,6 @@ void Vina::global_search_gpu(const int exhaustiveness, const int n_poses, const 
 }
 
 Vina::~Vina() {
-    // OpenBabel::OBMol m_mol;
     //  model and poses
     model m_receptor;
     model m_model;

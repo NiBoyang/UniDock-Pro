@@ -100,10 +100,6 @@ public:
         VINA_CHECK(dim() == rectangular.dim_1());
         VINA_CHECK(rectangular.dim_2() == triangular.dim());
 
-        // a filler value is needed by append or resize
-        // we will use a value from rectangular as the filler value
-        // but it can not be obtained if dim_1 or dim_2 is 0
-        // these cases have to be considered separately
         if (rectangular.dim_2() == 0) return;
         if (rectangular.dim_1() == 0) {
             (*this) = triangular;

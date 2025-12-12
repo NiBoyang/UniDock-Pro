@@ -3,7 +3,6 @@
 
 #include "model.h"
 
-// does not set model
 void mutate_conf(conf& c, const model& m, fl amplitude, rng& generator);
 
 #endif

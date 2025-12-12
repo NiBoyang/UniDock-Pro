@@ -343,8 +343,6 @@ struct output_type {
     fl total;
     vecv coords;
     output_type(const conf& c_, fl e_) : c(c_), e(e_) {}
-    // output_type(const conf& c_, fl e_, fl intra_, fl conf_independent_) : c(c_), e(e_),
-    // intra(intra_), conf_independent(conf_independent_) {}
 };
 
 typedef boost::ptr_vector<output_type> output_container;

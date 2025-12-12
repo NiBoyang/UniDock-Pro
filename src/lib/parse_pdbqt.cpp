@@ -91,8 +91,6 @@ parsed_atom parse_pdbqt_atom_string(const std::string& str) {
             str);
 }
 
-// Removed SDF atom string parsing
-
 struct atom_reference {
     sz index;
     bool inflex;
@@ -137,8 +135,6 @@ public:
         parsed_atom a;
         std::vector<T> ps;
         node_t(const parsed_atom& a_, sz context_index_) : context_index(context_index_), a(a_) {}
-        // node_t(const parsing_struct::node_t<T> &n): context_index(n.context_index), a(n.a),
-        // ps(n.ps) {}
 
         // inflex atom insertion
         void insert_inflex(non_rigid_parsed& nr) {
@@ -151,10 +147,6 @@ public:
             ps[i].insert_immobile_inflex(nr);
         }
 
-        //------------------------------------------------------------------------------
-        // insertion into non_rigid_parsed
-        // ADDED: we pass skip_recenter here
-        //------------------------------------------------------------------------------
         void insert(non_rigid_parsed& nr, context& c, 
                     const vec& frame_origin, bool skip_recenter) // ADDED param
         {
@@ -175,9 +167,6 @@ public:
             nr.atoms.push_back(movable_atom(a, relative_coords));
         }
 
-        //------------------------------------------------------------------------------
-        // insertion of immobiles - also forward skip_recenter
-        //------------------------------------------------------------------------------
         void insert_immobiles(non_rigid_parsed& nr, context& c, 
                               const vec& frame_origin, bool skip_recenter) // ADDED param
         {
@@ -219,10 +208,6 @@ public:
         }
     }
 
-    //------------------------------------------------------------------------------
-    // insertion into non_rigid_parsed
-    // ADDED: overload to accept skip_recenter
-    //------------------------------------------------------------------------------
     void insert_immobile(non_rigid_parsed& nr, context& c, 
                          const vec& frame_origin, bool skip_recenter) // ADDED
     {
@@ -646,11 +631,8 @@ static void parse_sdf_aux_removed(std::istream& in, parsing_struct& new_p, parsi
                     p.atoms[atomid - 1].a.ad = ad;
                 }
             } else if (str.find("torsion") < str.length()) {
-                // update p.atoms[num].a.charge
-                // std::cout << "start torsion" << std::endl;
                 while (std::getline(in, str)) {
                     add_context(c, str);
-                    // std::cout << "read torsion sdf line:" << str << std::endl;
                     if (str.empty()) {
                         break;
                     }
@@ -672,7 +654,6 @@ static void parse_sdf_aux_removed(std::istream& in, parsing_struct& new_p, parsi
             } else if (str.find("frag") < str.length()) {
                 while (std::getline(in, str)) {
                     add_context(c, str);
-                    // std::cout << "read frag sdf line:" << str << std::endl;
                     if (str.empty()) {
                         break;
                     }
@@ -693,7 +674,6 @@ static void parse_sdf_aux_removed(std::istream& in, parsing_struct& new_p, parsi
             } else {
                 while (std::getline(in, str)) {
                     add_context(c, str);
-                    // std::cout << "read und sdf line:" << str << std::endl;
                     if (str.empty()) {
                         break;
                     }
@@ -704,20 +684,13 @@ static void parse_sdf_aux_removed(std::istream& in, parsing_struct& new_p, parsi
 
     torsdof = unsigned(torsions.size());
 
-    // print_zero();
-    // similar to parse_pdbqt_root
-
     if (!keep_H) {
         for (int i = 0; i < frags.size(); ++i) {
             std::vector<int> new_frag_nonH;
             for (int j = 0; j < frags[i].size(); ++j) {
                 if (p.atoms[frags[i][j] - 1].a.ad != AD_TYPE_H) {
                     new_frag_nonH.push_back(frags[i][j]);
-                    // std::cout << "atom num=" << frags[i][j] << " , AD type = " <<
-                    // p.atoms[frags[i][j]-1].a.ad << std::endl;
-                } else {
-                    // std::cout << "atom num=" << frags[i][j] << " is H, omitted" << std::endl;
-                }
+                } else {}
             }
             frags[i] = new_frag_nonH;
         }
@@ -726,8 +699,6 @@ static void parse_sdf_aux_removed(std::istream& in, parsing_struct& new_p, parsi
             std::vector<int> new_frag_keep_H;
             for (int j = 0; j < frags[i].size(); ++j) {
                 new_frag_keep_H.push_back(frags[i][j]);
-                // std::cout << "atom num=" << frags[i][j] << " , AD type = " <<
-                // p.atoms[frags[i][j]-1].a.ad << std::endl;
             }
             frags[i] = new_frag_keep_H;
         }
@@ -738,8 +709,6 @@ static void parse_sdf_aux_removed(std::istream& in, parsing_struct& new_p, parsi
         new_p = p;
         return;  // do not use new p
     }
-    // print_zero();
-    // print_zero();
     int max_torsion_frag_id, max_atom_frag_id;
     int center_atom_id, center_atom_frag_id = 0;
     int max_atom_frag = -1;
@@ -765,8 +734,6 @@ static void parse_sdf_aux_removed(std::istream& in, parsing_struct& new_p, parsi
             center_atom_id = i;
         }
     }
-    // std::cout << center[0] << ' ' << center[1] << ' ' << center[2] << "atom:" << center_atom_id
-    // << std::endl;
     for (int i = 0; i < frags.size(); ++i) {
         for (int j = 0; j < frags[i].size(); ++j) {
             if (frags[i][j] - 1 == center_atom_id) {
@@ -784,8 +751,6 @@ static void parse_sdf_aux_removed(std::istream& in, parsing_struct& new_p, parsi
         p.atoms[frags[max_atom_frag_id][i] - 1].a.number
             = number;  // assign new number of tree structure
         ++number;
-        // std::cout << "pushing atom in parse_sdf_aux i=" << i << ' '  <<
-        // frags[max_atom_frag_id].size() << std::endl;
 
         new_p.add(p.atoms[frags[max_atom_frag_id][i] - 1].a,
                   p.atoms[frags[max_atom_frag_id][i] - 1].context_index,
@@ -797,7 +762,6 @@ static void parse_sdf_aux_removed(std::istream& in, parsing_struct& new_p, parsi
     std::set<int> been_frags = {max_atom_frag_id};  // prevent dead loop caused by fraginfo errors
     for (int i = 0; i < frags[max_atom_frag_id].size(); ++i) {
         for (int j = 0; j < torsions.size(); ++j) {
-            // std::cout << "j=" << j << std::endl;
             if (torsions[j][0] == frags[max_atom_frag_id][i]) {
                 int frag_id = torsions[j][3];
                 parse_sdf_branch_aux(frags, torsions, frag_id, new_p, p, c, number, torsions[j][0],
@@ -813,7 +777,7 @@ static void parse_sdf_aux_removed(std::istream& in, parsing_struct& new_p, parsi
 #endif
 
 void parse_sdf_ligand(const path&, non_rigid_parsed&, context&, bool) {
-    VINA_CHECK(false); // SDF input removed
+    VINA_CHECK(false); 
 }
 
 void parse_pdbqt_residue(std::istream& in, parsing_struct& p, context& c) {
@@ -887,13 +851,10 @@ void parse_pdbqt_branch(std::istream& in, parsing_struct& p, context& c, unsigne
     }
 }
 
-// SDF branch parser removed
 
-//////////// new stuff //////////////////
 struct pdbqt_initializer {
     atom_type::t atom_typing_used;
     model m;
-    // pdbqt_initializer(): atom_typing_used(atom_type::XS), m(atom_type::XS) {}
     pdbqt_initializer(atom_type::t atype) : atom_typing_used(atype), m(atype) {}
     void initialize_from_rigid(const rigid& r) {  // static really
         VINA_CHECK(m.grid_atoms.empty());
@@ -1006,8 +967,6 @@ model parse_ligand_pdbqt_from_file_no_failure(const std::string& name, atom_type
     return tmp.m;
 }
 
-// model parse_ligand_sdf_from_file_no_failure removed
-
 model parse_ligand_pdbqt_from_string(const std::string& string_name,
                                      atom_type::t atype) {  // can throw parse_error
     non_rigid_parsed nrp;
@@ -1050,12 +1009,6 @@ model parse_ligand_pdbqt_from_string_no_failure(const std::string& string_name,
 
 model parse_receptor_pdbqt(const std::string& rigid_name, const std::string& flex_name,
                            atom_type::t atype) {
-    // Parse PDBQT receptor with flex residues
-    // if (rigid_name.empty() && flex_name.empty()) {
-    //    // CONDITION 1
-    //    std::cerr << "ERROR: No (rigid) receptor or flexible residues were specified.\n";
-    //    exit(EXIT_FAILURE);
-    //}
 
     rigid r;
     non_rigid_parsed nrp;
@@ -1098,12 +1051,6 @@ model parse_receptor_pdbqt(const std::string& rigid_name, const std::string& fle
 
 model parse_receptor_pdb(const std::string& rigid_name, const std::string& flex_name,
                          atom_type::t atype) {
-    // Parse PDBQT receptor with flex residues
-    // if (rigid_name.empty() && flex_name.empty()) {
-    //    // CONDITION 1
-    //    std::cerr << "ERROR: No (rigid) receptor or flexible residues were specified.\n";
-    //    exit(EXIT_FAILURE);
-    //}
 
     rigid r;
     non_rigid_parsed nrp;

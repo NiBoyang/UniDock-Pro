@@ -17,7 +17,6 @@
 #include <boost/filesystem.hpp>  // filesystem::basename
 #include <boost/thread/thread.hpp>           // hardware_concurrency // FIXME rm ?
 #include <boost/algorithm/string.hpp>
-// #include <openbabel/mol.h>
 #include "parse_pdbqt.h"
 #include "file.h"
 #include "conf.h"
@@ -72,7 +71,6 @@ public:
     // Destructor
     ~Vina();
 
-    void cite();
     int seed() { return m_seed; }
     void set_receptor(const std::string& rigid_name = std::string(),
                       const std::string& flex_name = std::string());
@@ -151,12 +149,10 @@ public:
         mc.local_steps = unsigned((25 + m_model_gpu[i].num_movable_atoms()) / 3);
     }
     mc.global_steps = unsigned(70 * 3 * (50 + heuristic) / 2);  // 2 * 70 -> 8 * 20 // FIXME
-    // DEBUG_PRINTF("mc.global_steps = %u, max_step = %d, ��unsigned)max_step=%u\n",
-    // mc.global_steps, max_step, (unsigned)max_step);
     if (max_step > 0 && mc.global_steps > (unsigned)max_step) {
         mc.global_steps = (unsigned)max_step;
     }
-    // DEBUG_PRINTF("final mc.global_steps = %u\n", mc.global_steps);
+
     mc.max_evals = max_evals;
     mc.min_rmsd = min_rmsd;
     mc.num_saved_mins = n_poses;
@@ -235,12 +231,8 @@ public:
                 if (m_verbosity > 1) std::cout << "ENERGY FROM SEARCH: " << poses[i].e << "\n";
 
                 m_model_gpu[l].set(poses[i].c);
-
-                // m_model = m_model_gpu[l]; // Vina::score() will use m_model and
-                // m_precalculated_byatom m_precalculated_byatom = m_precalculated_byatom_gpu[l];
                 DEBUG_PRINTF("intramolecular_energy=%f\n", intramolecular_energy);
                 std::vector<double> energies = score_gpu(l, intramolecular_energy);
-                // DEBUG_PRINTF("energies.size()=%d\n", energies.size());
                 // Store energy components in current pose
                 poses[i].e = energies[0];  // specific to each scoring function
                 poses[i].inter = energies[1] + energies[2];
@@ -331,7 +323,6 @@ public:
     bool gpu;
     std::vector<model> m_model_gpu;  // list of m_model for gpu parallelism
     std::vector<output_container> m_poses_gpu;
-    // OpenBabel::OBMol m_mol;
     bool m_receptor_initialized;
     bool m_ligand_initialized;
     // scoring function

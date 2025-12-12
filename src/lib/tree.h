@@ -110,8 +110,7 @@ struct segment : public axis_frame {
         origin = parent.local_to_lab(relative_origin);
         axis = parent.local_to_lab_direction(relative_axis);
         qt tmp = angle_to_quaternion(axis, torsion) * parent.orientation();
-        quaternion_normalize_approx(tmp);  // normalization added in 1.1.2
-        // quaternion_normalize(tmp); // normalization added in 1.1.2
+        quaternion_normalize_approx(tmp);
         set_orientation(tmp);
         set_coords(atoms, coords);
     }

@@ -280,15 +280,11 @@ void read_vina_map(path& filename, std::vector<grid_dims>& gds, grid& g) {
                 halfspan = (gd[i].n_voxels) * spacing / 2.0;
                 gd[i].begin = center - halfspan;
                 gd[i].end = center + halfspan;
-                // std::cout << center << " " << halfspan << " " << gd[i].begin << " " << gd[i].end
-                // << "\n";
             }
             gds.push_back(gd);
             g.init(gd);
         }
         if (line_counter > 6) {
-            // std::cout << pt_counter << " " << x << " " << y << " " << z << " " <<
-            // std::atof(line.c_str()) << "\n";
             g.m_data(x, y, z) = std::atof(line.c_str());
             y += sz(x == (gd[0].n_voxels + 1));
             z += sz(y == (gd[1].n_voxels + 1));
@@ -297,7 +293,7 @@ void read_vina_map(path& filename, std::vector<grid_dims>& gds, grid& g) {
             pt_counter++;
             x++;
         }
-    }  // line loop
+    } 
 }
 
 void cache::read(const std::string& map_prefix) {

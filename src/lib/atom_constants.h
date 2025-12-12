@@ -422,15 +422,11 @@ const xs_lj_params xs_lj_params_data[] = {
     {0.60, 1.40}  // B - NEW
 };
 
-// Removed SM LJ params data
-
 inline xs_lj_params xs_lj(sz t) {
     assert(sizeof(xs_lj_params_data) / sizeof(const xs_lj_params) == XS_TYPE_SIZE);
     assert(t < sizeof(xs_lj_params_data) / sizeof(const xs_lj_params));
     return xs_lj_params_data[t];
 }
-
-// Removed SM LJ accessor
 
 inline fl xs_radius(sz t) {
     assert(sizeof(xs_vdw_radii) / sizeof(const fl) == XS_TYPE_SIZE);
@@ -510,7 +506,5 @@ inline fl max_covalent_radius() {
     if (atom_kind_data[i].covalent_radius > tmp) tmp = atom_kind_data[i].covalent_radius;
     return tmp;
 }
-
-// Removed SM type mappings and adjustments
 
 #endif

@@ -409,7 +409,6 @@ void model::assign_types() {
         bool hdBonded = bonded_to_HD(a);
         bool heteroBonded = bonded_to_heteroatom(a);
         a.assign_el();
-        // SM atom type logic removed
         sz& x = a.xs;
 
         bool acceptor = (a.ad == AD_TYPE_OA
@@ -780,8 +779,6 @@ void model::write_context(const context& c, std::ostringstream& out) const {
     }
 }
 
-// Removed SDF context writer to string
-
 std::string model::write_model(sz model_number, const std::string& remark) {
     std::ostringstream out;
 
@@ -797,8 +794,6 @@ std::string model::write_model(sz model_number, const std::string& remark) {
 
     return out.str();
 }
-
-// Removed SDF model writer
 
 void model::set(const conf& c) {
     ligands.set_conf(atoms, coords, c.ligands);
@@ -917,7 +912,6 @@ fl model::eval_deriv(const precalculate_byatom& p, const igrid& ig, const vec& v
 }
 
 fl model::eval_intramolecular(const precalculate_byatom& p, const igrid& ig, const vec& v) {
-    // printf("entering eval_intramolecular\n");
     fl e = 0;
     const fl cutoff_sqr = p.cutoff_sqr();
 
@@ -928,7 +922,6 @@ fl model::eval_intramolecular(const precalculate_byatom& p, const igrid& ig, con
                                           // printf("e1=%f\n", e);
                                           // flex - rigid
     e += ig.eval_intra(*this, v[1]);
-    // printf("e2=%f\n", e);
 
     // flex_i - flex_i and flex_i - flex_j
     VINA_FOR_IN(i, other_pairs) {
@@ -940,16 +933,6 @@ fl model::eval_intramolecular(const precalculate_byatom& p, const igrid& ig, con
             e += this_e;
         }
     }
-    // printf("e3=%f\n", e);
-    // glue_i - glue_i and glue_i - glue_j interactions (no cutoff)
-    // VINA_FOR_IN(i, glue_pairs) {
-    //     const interacting_pair& pair = glue_pairs[i];
-    //     fl r2 = vec_distance_sqr(coords[pair.a], coords[pair.b]);
-    //     fl this_e = p.eval_fast(pair.a, pair.b, r2);
-    //     curl(this_e, v[2]);
-    //     e += this_e;
-    // }
-    // printf("e4=%f\n", e);
 
     return e;
 }

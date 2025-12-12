@@ -115,8 +115,6 @@ public:
         m_n = sz(m_factor * m_max_cutoff_sqr)
               + 3;  // sz(factor * r^2) + 1 <= sz(factor * max_cutoff_sqr) + 2 <= n-1 < n  // see
                     // assert below
-        // std::cout << "-- DEBUG precalculate -- sf.cutoff^2 in precalculate = " <<
-        // m_max_cutoff_sqr << "\n" << factor << ' ' << m_n << "\n";
         triangular_matrix<precalculate_element> data(num_atom_types(sf.get_atom_typing()),
                                                      precalculate_element(m_n, m_factor));
 
@@ -131,13 +129,9 @@ public:
         VINA_FOR(t1, data.dim()) {
             VINA_RANGE(t2, t1, data.dim()) {
                 precalculate_element &p = data(t1, t2);
-                // init smooth[].first
-
                 VINA_FOR_IN(i, p.smooth) {
                     p.smooth[i].first = (std::min)(v, sf.eval(t1, t2, rs[i]));
                 }
-
-                // init the rest
                 p.init_from_smooth_fst(rs);
             }
         }
@@ -190,8 +184,6 @@ public:
         m_n = sz(m_factor * m_max_cutoff_sqr)
               + 3;  // sz(factor * r^2) + 1 <= sz(factor * cutoff_sqr) + 2 <= n-1 < n  // see assert
                     // below
-        // std::cout << "-- DEBUG byatm -- sf.cutoff^2 in precalculate = " << m_cutoff_sqr << "\n"
-        // << factor << ' ' << m_n << "\n";
         sz n_atoms = model.num_atoms();
         atomv atoms = model.get_atoms();
         triangular_matrix<precalculate_element> data(n_atoms, precalculate_element(m_n, m_factor));
@@ -207,11 +199,9 @@ public:
         VINA_FOR(i, data.dim()) {
             VINA_RANGE(j, i, data.dim()) {
                 precalculate_element &p = data(i, j);
-                // init smooth[].first
                 VINA_FOR_IN(k, p.smooth) {
                     p.smooth[k].first = (std::min)(v, sf.eval(atoms[i], atoms[j], rs[k]));
                 }
-                // init the rest
                 p.init_from_smooth_fst(rs);
             }
         }
@@ -227,8 +217,6 @@ public:
         m_n = sz(m_factor * m_max_cutoff_sqr)
               + 3;  // sz(factor * r^2) + 1 <= sz(factor * cutoff_sqr) + 2 <= n-1 < n  // see assert
                     // below
-        // std::cout << "-- DEBUG byatm -- sf.cutoff^2 in precalculate = " << m_cutoff_sqr << "\n"
-        // << factor << ' ' << m_n << "\n";
         sz n_atoms = model.num_atoms();
         triangular_matrix<precalculate_element> data(n_atoms, precalculate_element(m_n, m_factor));
         m_data = data;
