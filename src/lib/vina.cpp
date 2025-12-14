@@ -641,7 +641,7 @@ void Vina::combine_grids(cache& receptor_grid, const cache& ligand_grid,
                     double rec_val = rec_data(ix, iy, iz);
                     double lig_val = lig_data(ix, iy, iz);
 
-                    if (hybrid_mode) {
+                    if (hybrid_mode && m_zero_guard) {
                         bool receptor_is_zero = std::fabs(rec_val) <= zero_tolerance;
                         if (receptor_is_zero && lig_val < 0.0) {
                             rec_data(ix, iy, iz) = 0.0;
@@ -795,9 +795,22 @@ std::string Vina::vina_remarks(const model& m, output_type& pose, fl lb, fl ub) 
     remark.setf(std::ios::fixed, std::ios::floatfield);
     remark.setf(std::ios::showpoint);
 
+    // VINA RESULT: total score (includes all components)
     remark << "REMARK VINA RESULT: " << std::setw(9) << std::setprecision(3) << pose.total << "  "
            << std::setw(9) << std::setprecision(3) << lb << "  " << std::setw(9)
            << std::setprecision(3) << ub << '\n';
+
+    // INTER + INTRA: receptor contribution only (excludes reflig_contrib)
+    remark << "REMARK INTER + INTRA: " << std::setw(9) << std::setprecision(3)
+           << (pose.inter + pose.intra) << '\n';
+    remark << "REMARK INTER:         " << std::setw(9) << std::setprecision(3) << pose.inter << '\n';
+    remark << "REMARK INTRA:         " << std::setw(9) << std::setprecision(3) << pose.intra << '\n';
+
+    // REFLIG_CONTRIB: reference ligand contribution (hybrid mode only)
+    if (hybrid_mode && std::fabs(pose.reflig_contrib) > 1e-9) {
+        remark << "REMARK REFLIG_CONTRIB:" << std::setw(9) << std::setprecision(3)
+               << pose.reflig_contrib << '\n';
+    }
 
     return remark.str();
 }
@@ -1103,6 +1116,7 @@ std::vector<double> Vina::calculate_score(model& mdl, const precalculate_byatom&
     double conf_independent = 0;
     double inter_pairs = 0;
     double intra_pairs = 0;
+    double reflig_contrib = 0;  // reference ligand contribution (hybrid mode)
     const vec authentic_v(1000, 1000, 1000);
     std::vector<double> energies;
 
@@ -1120,16 +1134,24 @@ std::vector<double> Vina::calculate_score(model& mdl, const precalculate_byatom&
             flex_grids = m_non_cache.eval_intra(mdl, authentic_v[1]);  // [1] flex -- grid
         intra_pairs = mdl.evalo(prec, authentic_v);  // [1] flex_i -- flex_i and flex_i -- flex_j
         lig_grids = all_grids - flex_grids;
+
+        // In hybrid mode, calculate reference ligand contribution separately
+        if (hybrid_mode && !m_no_refine && m_receptor_initialized) {
+            reflig_contrib = m_non_cache.eval_reflig_only(mdl, authentic_v[1]);
+            // Subtract reflig_contrib from lig_grids to get pure receptor contribution
+            lig_grids = lig_grids - reflig_contrib;
+        }
+
         inter = lig_grids + inter_pairs;
         lig_intra = mdl.evali(prec, authentic_v);  // [2] ligand_i -- ligand_i
         intra = flex_grids + intra_pairs + lig_intra;
-        // Total
+        // Total (includes reflig_contrib for backward compatibility)
         total = m_scoring_function->conf_independent(
             mdl,
-            inter + intra
+            inter + intra + reflig_contrib
                 - intramolecular_energy);  // we pass intermolecular energy from the best pose
         // Torsion, we want to know how much torsion penalty was added to the total energy
-        conf_independent = total - (inter + intra - intramolecular_energy);
+        conf_independent = total - (inter + intra + reflig_contrib - intramolecular_energy);
     }
 
     energies.push_back(total);
@@ -1145,6 +1167,9 @@ std::vector<double> Vina::calculate_score(model& mdl, const precalculate_byatom&
     } else {
         energies.push_back(-intra);
     }
+
+    // Add reference ligand contribution as the 9th element (index 8)
+    energies.push_back(reflig_contrib);
 
     return energies;
 }
@@ -1437,7 +1462,8 @@ void Vina::global_search_gpu(const int exhaustiveness, const int n_poses, const 
                 poses[i].e = energies[0];  // specific to each scoring function
                 poses[i].inter = energies[1] + energies[2];
                 poses[i].intra = energies[3] + energies[4] + energies[5];
-                poses[i].total = poses[i].inter + poses[i].intra;  // cost function for optimization
+                poses[i].reflig_contrib = energies[8];  // reference ligand contribution
+                poses[i].total = poses[i].inter + poses[i].intra + poses[i].reflig_contrib;  // includes reflig_contrib
                 poses[i].conf_independent = energies[6];           // "torsion"
                 poses[i].unbound = energies[7];  // specific to each scoring function
 

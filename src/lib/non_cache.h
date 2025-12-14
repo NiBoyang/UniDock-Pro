@@ -25,6 +25,9 @@ struct non_cache : public igrid {
     void set_weights(double receptor_weight, double reference_ligand_weight);
     void set_reference_ligand_scale(double scale) { m_reference_ligand_scale = scale; }
 
+    // Evaluate only reference ligand contribution (for hybrid mode energy decomposition)
+    fl eval_reflig_only(const model& m, fl v) const;
+
 private:
     // Applies the reference ligand bias to a given atom
     fl apply_reference_ligand_bias(const atom& a, const vec& a_coords, vec& deriv, bool calc_deriv) const;

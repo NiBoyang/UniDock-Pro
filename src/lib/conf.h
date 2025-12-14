@@ -341,8 +341,9 @@ struct output_type {
     fl conf_independent;
     fl unbound;
     fl total;
+    fl reflig_contrib;  // reference ligand contribution for hybrid mode
     vecv coords;
-    output_type(const conf& c_, fl e_) : c(c_), e(e_) {}
+    output_type(const conf& c_, fl e_) : c(c_), e(e_), reflig_contrib(0) {}
 };
 
 typedef boost::ptr_vector<output_type> output_container;

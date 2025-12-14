@@ -506,6 +506,63 @@ fl non_cache::eval_intra(model& m, fl v) const {  // clean up
     return e;
 }
 
+// Evaluate only reference ligand contribution (for hybrid mode energy decomposition)
+fl non_cache::eval_reflig_only(const model& m, fl v) const {
+    if (!has_reference_ligand || !m_hybrid_mode) return 0.0;
+
+    fl e = 0;
+    sz n = num_atom_types(atom_type::XS);
+
+    VINA_FOR(i, m.num_movable_atoms()) {
+        fl this_e = 0;
+        const atom& a = m.atoms[i];
+        sz t1 = a.get(atom_type::XS);
+        if (t1 >= n) continue;
+        switch (t1) {
+            case XS_TYPE_G0:
+            case XS_TYPE_G1:
+            case XS_TYPE_G2:
+            case XS_TYPE_G3:
+                continue;
+            case XS_TYPE_C_H_CG0:
+            case XS_TYPE_C_H_CG1:
+            case XS_TYPE_C_H_CG2:
+            case XS_TYPE_C_H_CG3:
+                t1 = XS_TYPE_C_H;
+                break;
+            case XS_TYPE_C_P_CG0:
+            case XS_TYPE_C_P_CG1:
+            case XS_TYPE_C_P_CG2:
+            case XS_TYPE_C_P_CG3:
+                t1 = XS_TYPE_C_P;
+                break;
+        }
+
+        const vec& a_coords = m.coords[i];
+        vec adjusted_a_coords = a_coords;
+
+        // Handle out of bounds
+        VINA_FOR_IN(j, gd) {
+            if (gd[j].n_voxels > 0) {
+                if (a_coords[j] < gd[j].begin) {
+                    adjusted_a_coords[j] = gd[j].begin;
+                } else if (a_coords[j] > gd[j].end) {
+                    adjusted_a_coords[j] = gd[j].end;
+                }
+            }
+        }
+
+        // Calculate reference ligand bias only
+        vec dummy_deriv; // Not used in eval
+        fl ref_e = apply_reference_ligand_bias(a, adjusted_a_coords, dummy_deriv, false);
+        this_e = m_reference_ligand_weight * ref_e;
+
+        curl(this_e, v);
+        e += this_e;
+    }
+    return e;
+}
+
 // add to make get_grids() work
 std::vector<grid> non_cache::get_grids() const {
     assert(false);  // This function should not be called!

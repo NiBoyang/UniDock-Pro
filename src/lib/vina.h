@@ -55,6 +55,7 @@ public:
         receptor_weight = 1.0;
         reference_ligand_weight = 1.0;
         reference_ligand_scale = 1.0;
+        m_zero_guard = true;  // enable zero-guard by default
 
         if (sf_name.compare("vina") == 0) {
             m_sf_choice = SF_VINA;
@@ -237,7 +238,8 @@ public:
                 poses[i].e = energies[0];  // specific to each scoring function
                 poses[i].inter = energies[1] + energies[2];
                 poses[i].intra = energies[3] + energies[4] + energies[5];
-                poses[i].total = poses[i].inter + poses[i].intra;  // cost function for optimization
+                poses[i].reflig_contrib = energies[8];  // reference ligand contribution
+                poses[i].total = poses[i].inter + poses[i].intra + poses[i].reflig_contrib;  // includes reflig_contrib
                 poses[i].conf_independent = energies[6];           // "torsion"
                 poses[i].unbound = energies[7];  // specific to each scoring function
 
@@ -366,6 +368,7 @@ public:
     bool pure_docking;
     bool similarity_searching;
     bool hybrid_mode;
+    bool m_zero_guard;  // enable zero-guard in hybrid mode (default: true)
 
     model reference_ligand_model;
     bool reference_ligand_initialized;

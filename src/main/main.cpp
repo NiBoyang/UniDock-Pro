@@ -335,6 +335,7 @@ bug reporting, license agreements, and more information.      \n";
         bool help_advanced = false;
         bool version = false;  // FIXME
         bool autobox = false;
+        bool no_zero_guard = false;  // disable zero-guard in hybrid mode
         variables_map vm;
 
         bool keep_H = true;
@@ -407,6 +408,9 @@ bug reporting, license agreements, and more information.      \n";
             "weight for reference ligand similarity in hybrid mode")(
             "reference_ligand_scale", value<double>()->default_value(2.0),
             "scaling factor for reference ligand LJ parameters")(
+            "no_zero_guard", bool_switch(&no_zero_guard),
+            "disable zero-guard in hybrid mode (by default, attractive ligand potential is zeroed "
+            "where receptor potential is zero)")(
 
             "weight_gauss1", value<double>(&weight_gauss1)->default_value(weight_gauss1),
             "gauss_1 weight")(
@@ -726,6 +730,7 @@ bug reporting, license agreements, and more information.      \n";
         v.pure_docking = pure_docking;
         v.similarity_searching = similarity_searching;
         v.hybrid_mode = hybrid_mode;
+        v.m_zero_guard = !no_zero_guard;  // disable zero-guard if --no_zero_guard is set
 
         if (similarity_searching || hybrid_mode) {
             v.set_reference_ligand(reference_ligand_name);
