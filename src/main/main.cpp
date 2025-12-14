@@ -402,11 +402,7 @@ bug reporting, license agreements, and more information.      \n";
             "calculated grid maps will have an even number of voxels (intervals) in each dimension "
             "(odd number of grid points)")("randomize_only", bool_switch(&randomize_only),
                                            "randomize input, attempting to avoid clashes")(
-            "receptor_weight", value<double>()->default_value(1.0),
-            "weight for receptor scoring in hybrid mode")(
-            "reference_ligand_weight", value<double>()->default_value(1.0),
-            "weight for reference ligand similarity in hybrid mode")(
-            "reference_ligand_scale", value<double>()->default_value(2.0),
+            "reference_ligand_scale", value<double>()->default_value(1.0),
             "scaling factor for reference ligand LJ parameters")(
             "no_zero_guard", bool_switch(&no_zero_guard),
             "disable zero-guard in hybrid mode (by default, attractive ligand potential is zeroed "
@@ -577,8 +573,6 @@ bug reporting, license agreements, and more information.      \n";
 
         // 在程序逻辑部分添加模式判断
         std::string reference_ligand_name;
-        double receptor_weight = 1.0;
-        double reference_ligand_weight = 1.0;
         double reference_ligand_scale = 1.0;
         bool pure_docking = false;
         bool similarity_searching = false;
@@ -590,13 +584,6 @@ bug reporting, license agreements, and more information.      \n";
         }
         
         // 获取权重参数
-        if (vm.count("receptor_weight")) {
-            receptor_weight = vm["receptor_weight"].as<double>();
-        }
-        
-        if (vm.count("reference_ligand_weight")) {
-            reference_ligand_weight = vm["reference_ligand_weight"].as<double>();
-        }
         if (vm.count("reference_ligand_scale")) {
             reference_ligand_scale = vm["reference_ligand_scale"].as<double>();
         }
@@ -630,13 +617,10 @@ bug reporting, license agreements, and more information.      \n";
             } else if (similarity_searching) {
                 std::cout << "Mode: Similarity searching\n";
                 std::cout << "Reference ligand: " << reference_ligand_name << "\n";
-                std::cout << "Reference ligand weight: " << reference_ligand_weight << "\n";
                 std::cout << "Reference ligand scale: " << reference_ligand_scale << "\n";
             } else if (hybrid_mode) {
                 std::cout << "Mode: Hybrid (docking + similarity)\n";
                 std::cout << "Reference ligand: " << reference_ligand_name << "\n";
-                std::cout << "Receptor weight: " << receptor_weight << "\n";
-                std::cout << "Reference ligand weight: " << reference_ligand_weight << "\n";
                 std::cout << "Reference ligand scale: " << reference_ligand_scale << "\n";
             }
         }
@@ -724,8 +708,6 @@ bug reporting, license agreements, and more information.      \n";
 
         Vina v(sf_name, seed, verbosity, no_refine);
 
-        v.receptor_weight = receptor_weight;
-        v.reference_ligand_weight = reference_ligand_weight;
         v.reference_ligand_scale = reference_ligand_scale;
         v.pure_docking = pure_docking;
         v.similarity_searching = similarity_searching;

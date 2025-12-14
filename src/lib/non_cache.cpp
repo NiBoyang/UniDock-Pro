@@ -14,12 +14,6 @@ void non_cache::set_mode(bool pure_docking, bool similarity_searching, bool hybr
     m_hybrid_mode = hybrid_mode;
 }
 
-// Set the weights for hybrid mode
-void non_cache::set_weights(double receptor_weight, double reference_ligand_weight) {
-    m_receptor_weight = receptor_weight;
-    m_reference_ligand_weight = reference_ligand_weight;
-}
-
 // Set up the reference ligand data
 void non_cache::set_reference_ligand(const model& ref_lig) {
     has_reference_ligand = true;
@@ -94,8 +88,8 @@ fl non_cache::apply_reference_ligand_bias(const atom& a, const vec& a_coords, ve
     }
     
     // Get LJ parameters for this atom type
-    double LJ_A = xs_lj(t1).LJ_A * m_reference_ligand_scale;
-    double LJ_B = xs_lj(t1).LJ_B * m_reference_ligand_scale;
+    double LJ_A = xs_lj(t1).LJ_A * 3.0 * m_reference_ligand_scale;
+    double LJ_B = xs_lj(t1).LJ_B * 3.0 * m_reference_ligand_scale;
     
     // Find corresponding atom type in reference ligand
     auto it = ref_typed_atom_coords.find(t1);
@@ -247,11 +241,11 @@ fl non_cache::eval(const model& m, fl v) const {  // clean up
         }
 
         if (m_hybrid_mode) {
-            this_e += m_receptor_weight * receptor_e;
-            
+            this_e += receptor_e;
+
             // Add reference ligand bias
             vec dummy_deriv; // Not used in eval
-            this_e += m_reference_ligand_weight * apply_reference_ligand_bias(a, adjusted_a_coords, dummy_deriv, false);
+            this_e += apply_reference_ligand_bias(a, adjusted_a_coords, dummy_deriv, false);
         } else {
             this_e += receptor_e;
         }
@@ -417,14 +411,14 @@ fl non_cache::eval_deriv(model& m, fl v) const {  // clean up
         }
 
         if (m_hybrid_mode) {
-            this_e += m_receptor_weight * receptor_e;
-            deriv += m_receptor_weight * receptor_deriv;
+            this_e += receptor_e;
+            deriv += receptor_deriv;
 
             // Add reference ligand bias with derivatives
             vec ref_deriv(0, 0, 0);
             fl ref_e = apply_reference_ligand_bias(a, adjusted_a_coords, ref_deriv, true);
-            this_e += m_reference_ligand_weight * ref_e;
-            deriv += m_reference_ligand_weight * ref_deriv;
+            this_e += ref_e;
+            deriv += ref_deriv;
         } else {
             this_e += receptor_e;
             deriv += receptor_deriv;
@@ -555,7 +549,7 @@ fl non_cache::eval_reflig_only(const model& m, fl v) const {
         // Calculate reference ligand bias only
         vec dummy_deriv; // Not used in eval
         fl ref_e = apply_reference_ligand_bias(a, adjusted_a_coords, dummy_deriv, false);
-        this_e = m_reference_ligand_weight * ref_e;
+        this_e = ref_e;
 
         curl(this_e, v);
         e += this_e;

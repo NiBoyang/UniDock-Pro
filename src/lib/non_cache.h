@@ -22,7 +22,6 @@ struct non_cache : public igrid {
     // Reference ligand support
     void set_reference_ligand(const model& ref_lig);
     void set_mode(bool pure_docking, bool similarity_searching, bool hybrid_mode);
-    void set_weights(double receptor_weight, double reference_ligand_weight);
     void set_reference_ligand_scale(double scale) { m_reference_ligand_scale = scale; }
 
     // Evaluate only reference ligand contribution (for hybrid mode energy decomposition)
@@ -49,9 +48,7 @@ private:
     bool m_similarity_searching = false;
     bool m_hybrid_mode = false;
     
-    // Weights for hybrid mode
-    double m_receptor_weight = 1.0;
-    double m_reference_ligand_weight = 1.0;
+    // Scale for reference ligand LJ parameters
     double m_reference_ligand_scale = 1.0;
 };
 

@@ -52,8 +52,6 @@ public:
         m_no_refine = no_refine;
         m_progress_callback = progress_callback;
         gpu = false;
-        receptor_weight = 1.0;
-        reference_ligand_weight = 1.0;
         reference_ligand_scale = 1.0;
         m_zero_guard = true;  // enable zero-guard by default
 
@@ -361,8 +359,6 @@ public:
     std::vector<double> optimize(output_type& out, const int max_steps = 0);
     int generate_seed(const int seed = 0);
 
-    double receptor_weight;
-    double reference_ligand_weight;
     double reference_ligand_scale;
 
     bool pure_docking;
@@ -375,7 +371,7 @@ public:
 
     void set_reference_ligand(const std::string& reference_ligand_filename);
     void compute_ligand_maps(cache& ligand_grid, const model& ligand_model, const grid_dims& gd);
-    void combine_grids(cache& grid, const cache& ligand_grid, double receptor_weight, double ligand_weight);
+    void combine_grids(cache& grid, const cache& ligand_grid);
 };
 
 #endif

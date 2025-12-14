@@ -471,9 +471,8 @@ void Vina::compute_vina_maps(double center_x, double center_y, double center_z, 
         if (!m_no_refine) {
             non_cache nc(m_model, gd, &m_precalculated_sf, slope);
 
-            // Set mode and weights
+            // Set mode and scale
             nc.set_mode(pure_docking, similarity_searching, hybrid_mode);
-            nc.set_weights(receptor_weight, reference_ligand_weight);
             nc.set_reference_ligand_scale(reference_ligand_scale);
 
             // Add reference ligand
@@ -495,7 +494,6 @@ void Vina::compute_vina_maps(double center_x, double center_y, double center_z, 
         if (!m_no_refine) {
             non_cache nc(m_model, gd, &m_precalculated_sf, slope);
             nc.set_mode(pure_docking, similarity_searching, hybrid_mode);
-            nc.set_weights(receptor_weight, reference_ligand_weight);
             nc.set_reference_ligand_scale(reference_ligand_scale);
             nc.set_reference_ligand(reference_ligand_model);
             m_non_cache = nc;
@@ -514,7 +512,6 @@ void Vina::compute_vina_maps(double center_x, double center_y, double center_z, 
         if (!m_no_refine) {
             non_cache nc(m_model, gd, &m_precalculated_sf, slope);
             nc.set_mode(pure_docking, similarity_searching, hybrid_mode);
-            nc.set_weights(receptor_weight, reference_ligand_weight);
             nc.set_reference_ligand_scale(reference_ligand_scale);
             nc.set_reference_ligand(reference_ligand_model);
             m_non_cache = nc;
@@ -522,7 +519,7 @@ void Vina::compute_vina_maps(double center_x, double center_y, double center_z, 
 
         cache ligand_grid;
         compute_ligand_maps(ligand_grid, reference_ligand_model, gd);
-        combine_grids(grid, ligand_grid, receptor_weight, reference_ligand_weight);
+        combine_grids(grid, ligand_grid);
 
         // Store in Vina object
         m_grid = grid;
@@ -584,8 +581,8 @@ void Vina::compute_ligand_maps(cache& ligand_grid, const model& known_ligand_mod
 
     for (sz t : needed_types) {
         double radius = 1.54;
-        double LJ_A = xs_lj(t).LJ_A * reference_ligand_scale;
-        double LJ_B = xs_lj(t).LJ_B * reference_ligand_scale;
+        double LJ_A = xs_lj(t).LJ_A * 3.0 * reference_ligand_scale;
+        double LJ_B = xs_lj(t).LJ_B * 3.0 * reference_ligand_scale;
         ligand_grid.allocate_type(t, gd);
         auto & data = ligand_grid.get_array3d_ref(t);
             // If no known-ligand atoms of this type => fill with 0
@@ -620,8 +617,7 @@ void Vina::compute_ligand_maps(cache& ligand_grid, const model& known_ligand_mod
     }
 }
 
-void Vina::combine_grids(cache& receptor_grid, const cache& ligand_grid,
-                         double w_receptor, double w_ligand) {
+void Vina::combine_grids(cache& receptor_grid, const cache& ligand_grid) {
     const double zero_tolerance = 1e-12;
     szv needed_types = m_scoring_function->get_atom_types();
     for(sz t : needed_types) {
@@ -649,7 +645,7 @@ void Vina::combine_grids(cache& receptor_grid, const cache& ligand_grid,
                         }
                     }
 
-                    double combined = w_receptor * rec_val + w_ligand * lig_val;
+                    double combined = rec_val + lig_val;
                     rec_data(ix, iy, iz) = combined;
                 }
             }
