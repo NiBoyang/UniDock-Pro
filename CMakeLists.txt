@@ -31,6 +31,7 @@ if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
     86 # RTX 30
     89 # RTX 40, L40
     90 # H100
+    120 # RTX 50
   )
 endif()
 

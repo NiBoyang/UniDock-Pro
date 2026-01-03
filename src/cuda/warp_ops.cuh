@@ -477,12 +477,14 @@ __device__ __forceinline__ bool bfgs_update_warp(cg::thread_block_tile<TileSize>
     float r = 1 / (alpha * yp);
     int n = 6 + p->lig_torsion_size;
 
-    __shared__ float minus_hy_[(6 + DefaultConfig::MAX_NUM_OF_LIG_TORSION) * 32 / TileSize],
-        p_[(6 + DefaultConfig::MAX_NUM_OF_LIG_TORSION) * 32 / TileSize];
+    // Each block has (blockDim.x / TileSize) tiles, each needs (6 + MAX_NUM_OF_LIG_TORSION_) floats
+    // Using 128 (MAX_THREADS_PER_BLOCK) instead of 32 to correctly allocate for all tiles
+    __shared__ float minus_hy_[(6 + Config::MAX_NUM_OF_LIG_TORSION_) * 128 / TileSize],
+        p_[(6 + Config::MAX_NUM_OF_LIG_TORSION_) * 128 / TileSize];
 
     // Calculate offset
-    auto minus_hy_ptr_ = &minus_hy_[tile.meta_group_rank() * (6 + DefaultConfig::MAX_NUM_OF_LIG_TORSION)];
-    auto p_ptr_ = &p_[tile.meta_group_rank() * (6 + DefaultConfig::MAX_NUM_OF_LIG_TORSION)];
+    auto minus_hy_ptr_ = &minus_hy_[tile.meta_group_rank() * (6 + Config::MAX_NUM_OF_LIG_TORSION_)];
+    auto p_ptr_ = &p_[tile.meta_group_rank() * (6 + Config::MAX_NUM_OF_LIG_TORSION_)];
     for (int i = tile.thread_rank(); i < n; i += tile.num_threads()) {
         minus_hy_ptr_[i] = find_change_index_read(minus_hy, i);
         p_ptr_[i] = find_change_index_read(p, i);
