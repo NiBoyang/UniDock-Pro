@@ -54,6 +54,8 @@ public:
         gpu = false;
         reference_ligand_scale = 1.0;
         m_zero_guard = true;  // enable zero-guard by default
+        num_reference_ligands = 0;
+        reference_ligand_initialized = false;
 
         if (sf_name.compare("vina") == 0) {
             m_sf_choice = SF_VINA;
@@ -366,11 +368,12 @@ public:
     bool hybrid_mode;
     bool m_zero_guard;  // enable zero-guard in hybrid mode (default: true)
 
-    model reference_ligand_model;
+    std::vector<model> reference_ligand_models;  // multiple reference ligands
+    size_t num_reference_ligands;                // count of reference ligands
     bool reference_ligand_initialized;
 
-    void set_reference_ligand(const std::string& reference_ligand_filename);
-    void compute_ligand_maps(cache& ligand_grid, const model& ligand_model, const grid_dims& gd);
+    void set_reference_ligands(const std::vector<std::string>& reference_ligand_filenames);
+    void compute_ligand_maps(cache& ligand_grid, const std::vector<model>& ligand_models, const grid_dims& gd);
     void combine_grids(cache& grid, const cache& ligand_grid);
 };
 

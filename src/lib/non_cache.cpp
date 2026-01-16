@@ -14,18 +14,27 @@ void non_cache::set_mode(bool pure_docking, bool similarity_searching, bool hybr
     m_hybrid_mode = hybrid_mode;
 }
 
-// Set up the reference ligand data
-void non_cache::set_reference_ligand(const model& ref_lig) {
+// Set up the reference ligand data (multiple reference ligands)
+void non_cache::set_reference_ligands(const std::vector<model>& ref_ligs) {
+    if (ref_ligs.empty()) {
+        has_reference_ligand = false;
+        num_reference_ligands = 0;
+        return;
+    }
+
     has_reference_ligand = true;
+    num_reference_ligands = ref_ligs.size();
     ref_typed_atom_coords.clear();
-    
-    // Gather coordinates of reference ligand atoms by type
+
+    // Gather coordinates of reference ligand atoms by type, with reference ligand index
     atom_type::t atype = atom_type::XS;
-    const atomv& ligatoms = ref_lig.get_atoms();
-    
-    for(const auto& a: ligatoms) {
-        sz t = a.get(atype);
-        ref_typed_atom_coords[t].push_back(a.coords);
+
+    for (size_t ref_idx = 0; ref_idx < ref_ligs.size(); ++ref_idx) {
+        const atomv& ligatoms = ref_ligs[ref_idx].get_atoms();
+        for (const auto& a : ligatoms) {
+            sz t = a.get(atype);
+            ref_typed_atom_coords[t].push_back(std::make_pair(ref_idx, a.coords));
+        }
     }
 }
 
@@ -57,14 +66,13 @@ fl non_cache::lj_soft_cutoff_deriv(double d, double radius, double LJ_A, double 
     }
 }
 
-// Apply reference ligand bias for a given atom
+// Apply reference ligand bias for a given atom (averaged over all reference ligands)
 fl non_cache::apply_reference_ligand_bias(const atom& a, const vec& a_coords, vec& deriv, bool calc_deriv) const {
-    if (!has_reference_ligand) return 0.0;
-    
-    fl bias_e = 0.0;
+    if (!has_reference_ligand || num_reference_ligands == 0) return 0.0;
+
     const fl cutoff_sqr = p->cutoff_sqr();
     double radius = 1.54;
-    
+
     // Get atom type
     sz t1 = a.get(atom_type::XS);
     switch (t1) {
@@ -86,36 +94,56 @@ fl non_cache::apply_reference_ligand_bias(const atom& a, const vec& a_coords, ve
             t1 = XS_TYPE_C_P;
             break;
     }
-    
+
     // Get LJ parameters for this atom type
     double LJ_A = xs_lj(t1).LJ_A * 3.0 * m_reference_ligand_scale;
     double LJ_B = xs_lj(t1).LJ_B * 3.0 * m_reference_ligand_scale;
-    
-    // Find corresponding atom type in reference ligand
+
+    // Find corresponding atom type in reference ligands
     auto it = ref_typed_atom_coords.find(t1);
-    if (it != ref_typed_atom_coords.end()) {
-        // For each atom of the same type in reference ligand
-        for (const auto& ref_coord : it->second) {
-            double d2 = vec_distance_sqr(ref_coord, a_coords);
-            if (d2 > cutoff_sqr) continue;
-            
-            double d = std::sqrt(d2);
-            fl dE = lj_soft_cutoff(d, radius, LJ_A, LJ_B);
-            
-            // Add energy correction to match grid implementation
-            // if (dE != 0) dE = dE - 0.36;
-            
-            bias_e += dE;
-            
-            // Calculate and add derivatives if needed
-            if (calc_deriv && dE != 0) {
-                fl deriv_magnitude = lj_soft_cutoff_deriv(d, radius, LJ_A, LJ_B);
-                vec deriv_direction = (a_coords - ref_coord) / d; // Unit vector
-                deriv += deriv_magnitude * deriv_direction;
-            }
+    if (it == ref_typed_atom_coords.end()) {
+        return 0.0;
+    }
+
+    // Calculate energy and derivative contribution from each reference ligand separately
+    std::vector<fl> E_per_reflig(num_reference_ligands, 0.0);
+    std::vector<vec> deriv_per_reflig(num_reference_ligands, vec(0, 0, 0));
+
+    for (const auto& coord_pair : it->second) {
+        size_t ref_idx = coord_pair.first;
+        const vec& ref_coord = coord_pair.second;
+
+        double d2 = vec_distance_sqr(ref_coord, a_coords);
+        if (d2 > cutoff_sqr) continue;
+
+        double d = std::sqrt(d2);
+        fl dE = lj_soft_cutoff(d, radius, LJ_A, LJ_B);
+
+        E_per_reflig[ref_idx] += dE;
+
+        // Calculate and add derivatives if needed
+        if (calc_deriv && dE != 0) {
+            fl deriv_magnitude = lj_soft_cutoff_deriv(d, radius, LJ_A, LJ_B);
+            vec deriv_direction = (a_coords - ref_coord) / d;  // Unit vector
+            deriv_per_reflig[ref_idx] += deriv_magnitude * deriv_direction;
         }
     }
-    
+
+    // Average over all reference ligands
+    fl bias_e = 0.0;
+    vec avg_deriv(0, 0, 0);
+    for (size_t i = 0; i < num_reference_ligands; ++i) {
+        bias_e += E_per_reflig[i];
+        avg_deriv += deriv_per_reflig[i];
+    }
+    fl inv_num_ref = 1.0 / static_cast<fl>(num_reference_ligands);
+    bias_e *= inv_num_ref;
+    avg_deriv = inv_num_ref * avg_deriv;
+
+    if (calc_deriv) {
+        deriv += avg_deriv;
+    }
+
     return bias_e;
 }
 

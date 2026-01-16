@@ -475,9 +475,9 @@ void Vina::compute_vina_maps(double center_x, double center_y, double center_z, 
             nc.set_mode(pure_docking, similarity_searching, hybrid_mode);
             nc.set_reference_ligand_scale(reference_ligand_scale);
 
-            // Add reference ligand
+            // Add reference ligands (multiple)
             if (similarity_searching || hybrid_mode) {
-                nc.set_reference_ligand(reference_ligand_model);
+                nc.set_reference_ligands(reference_ligand_models);
             }
 
             m_non_cache = nc;
@@ -489,13 +489,13 @@ void Vina::compute_vina_maps(double center_x, double center_y, double center_z, 
     }
     else if (similarity_searching) {
         cache ligand_grid;
-        compute_ligand_maps(ligand_grid, reference_ligand_model, gd);
+        compute_ligand_maps(ligand_grid, reference_ligand_models, gd);
 
         if (!m_no_refine) {
             non_cache nc(m_model, gd, &m_precalculated_sf, slope);
             nc.set_mode(pure_docking, similarity_searching, hybrid_mode);
             nc.set_reference_ligand_scale(reference_ligand_scale);
-            nc.set_reference_ligand(reference_ligand_model);
+            nc.set_reference_ligands(reference_ligand_models);
             m_non_cache = nc;
         }
 
@@ -513,12 +513,12 @@ void Vina::compute_vina_maps(double center_x, double center_y, double center_z, 
             non_cache nc(m_model, gd, &m_precalculated_sf, slope);
             nc.set_mode(pure_docking, similarity_searching, hybrid_mode);
             nc.set_reference_ligand_scale(reference_ligand_scale);
-            nc.set_reference_ligand(reference_ligand_model);
+            nc.set_reference_ligands(reference_ligand_models);
             m_non_cache = nc;
         }
 
         cache ligand_grid;
-        compute_ligand_maps(ligand_grid, reference_ligand_model, gd);
+        compute_ligand_maps(ligand_grid, reference_ligand_models, gd);
         combine_grids(grid, ligand_grid);
 
         // Store in Vina object
@@ -527,43 +527,62 @@ void Vina::compute_vina_maps(double center_x, double center_y, double center_z, 
     }
 }
 
-void Vina::set_reference_ligand(const std::string& known_ligand_filename) {
-    if(known_ligand_filename.empty()) {
-        std::cerr << "ERROR: known_ligand filename is empty.\n";
+void Vina::set_reference_ligands(const std::vector<std::string>& reference_ligand_filenames) {
+    if(reference_ligand_filenames.empty()) {
+        std::cerr << "ERROR: reference_ligand filename list is empty.\n";
         exit(EXIT_FAILURE);
     }
+
     atom_type::t atom_typing = m_scoring_function->get_atom_typing();
 
-    // parse the ligand
-    model lig_model = parse_ligand_pdbqt_from_file(known_ligand_filename, atom_typing, false, true);
+    reference_ligand_models.clear();
+    for (const auto& filename : reference_ligand_filenames) {
+        if (filename.empty()) {
+            std::cerr << "ERROR: one of the reference_ligand filenames is empty.\n";
+            exit(EXIT_FAILURE);
+        }
 
-    // store it
-    reference_ligand_model = lig_model;
+        // parse the ligand
+        model lig_model = parse_ligand_pdbqt_from_file(filename, atom_typing, false, true);
+        reference_ligand_models.push_back(lig_model);
+
+        if (m_verbosity > 0) {
+            std::cout << "[SUCCESS] Reference ligand loaded from " << filename << "\n";
+        }
+    }
+
+    num_reference_ligands = reference_ligand_models.size();
     reference_ligand_initialized = true;
 
-    if(m_verbosity > 0) {
-        std::cout << "[SUCCESS] Reference ligand loaded from " << known_ligand_filename << "\n";
+    if (m_verbosity > 0) {
+        std::cout << "[INFO] Total " << num_reference_ligands << " reference ligand(s) loaded.\n";
     }
 }
 
-void Vina::compute_ligand_maps(cache& ligand_grid, const model& known_ligand_model, const grid_dims& gd) {
-    ligand_grid = cache( gd ); 
+void Vina::compute_ligand_maps(cache& ligand_grid, const std::vector<model>& ligand_models, const grid_dims& gd) {
+    ligand_grid = cache(gd);
 
-    // gather coords of known_ligand for each type
-    atom_type::t atype = m_scoring_function->get_atom_typing();
-    const atomv& ligatoms = known_ligand_model.get_atoms();
-    // build typed-atom-list
-    std::unordered_map< sz, std::vector<vec> > typed_atom_coords;
-    for(const auto& a: ligatoms) {
-        sz t = a.get(atype); // e.g. XS type
-        typed_atom_coords[t].push_back(a.coords);
+    if (ligand_models.empty()) {
+        std::cerr << "ERROR: No reference ligand models provided for computing ligand maps.\n";
+        exit(EXIT_FAILURE);
     }
 
-    // now fill the grid data
-    // for each t in possible types
-    szv needed_types = m_scoring_function->get_atom_types(); 
-    // double cutoff_sqr = radius * radius;
-    // define resolution in X,Y,Z
+    const size_t num_ref_ligs = ligand_models.size();
+    atom_type::t atype = m_scoring_function->get_atom_typing();
+
+    // Build typed-atom-list for ALL reference ligands combined
+    // Store coordinates with their reference ligand index for averaging
+    std::unordered_map<sz, std::vector<std::pair<size_t, vec>>> typed_atom_coords_by_reflig;
+
+    for (size_t ref_idx = 0; ref_idx < num_ref_ligs; ++ref_idx) {
+        const atomv& ligatoms = ligand_models[ref_idx].get_atoms();
+        for (const auto& a : ligatoms) {
+            sz t = a.get(atype);
+            typed_atom_coords_by_reflig[t].push_back(std::make_pair(ref_idx, a.coords));
+        }
+    }
+
+    szv needed_types = m_scoring_function->get_atom_types();
     sz Nx = ligand_grid.dim(0);
     sz Ny = ligand_grid.dim(1);
     sz Nz = ligand_grid.dim(2);
@@ -571,12 +590,13 @@ void Vina::compute_ligand_maps(cache& ligand_grid, const model& known_ligand_mod
     // LJ MODEL
     auto lj_soft_cutoff = [&](double d, double radius, double LJ_A, double LJ_B) {
         if (d <= radius) {
-            double d2 = d * d + 1.5;  // Adjustment for a perfect slope
+            double d2 = d * d + 1.5;
             double d6 = d2 * d2 * d2;
             double d12 = d6 * d6;
             return -((LJ_A / d12) + (LJ_B / d6));
+        } else {
+            return 0.0;
         }
-        else {return 0.0;}
     };
 
     for (sz t : needed_types) {
@@ -584,10 +604,11 @@ void Vina::compute_ligand_maps(cache& ligand_grid, const model& known_ligand_mod
         double LJ_A = xs_lj(t).LJ_A * 3.0 * reference_ligand_scale;
         double LJ_B = xs_lj(t).LJ_B * 3.0 * reference_ligand_scale;
         ligand_grid.allocate_type(t, gd);
-        auto & data = ligand_grid.get_array3d_ref(t);
-            // If no known-ligand atoms of this type => fill with 0
-        auto itTypeCoords = typed_atom_coords.find(t);
-        if (itTypeCoords == typed_atom_coords.end()) {
+        auto& data = ligand_grid.get_array3d_ref(t);
+
+        auto itTypeCoords = typed_atom_coords_by_reflig.find(t);
+        if (itTypeCoords == typed_atom_coords_by_reflig.end()) {
+            // No atoms of this type in any reference ligand
             for (sz ix = 0; ix < Nx; ix++) {
                 for (sz iy = 0; iy < Ny; iy++) {
                     for (sz iz = 0; iz < Nz; iz++) {
@@ -598,22 +619,35 @@ void Vina::compute_ligand_maps(cache& ligand_grid, const model& known_ligand_mod
             continue;
         }
 
-        const auto& coords_list = itTypeCoords->second;
+        const auto& coords_with_reflig = itTypeCoords->second;
+
         for (sz ix = 0; ix < Nx; ix++) {
             for (sz iy = 0; iy < Ny; iy++) {
-                for (sz iz = 0; iz < Nz; iz++) {                   
+                for (sz iz = 0; iz < Nz; iz++) {
                     vec gp = ligand_grid.index_to_argument(ix, iy, iz);
-                    double E = 0.0;
-                    for (const auto &ligand_coord : coords_list) {
+
+                    // Calculate energy contribution from each reference ligand separately
+                    std::vector<double> E_per_reflig(num_ref_ligs, 0.0);
+
+                    for (const auto& coord_pair : coords_with_reflig) {
+                        size_t ref_idx = coord_pair.first;
+                        const vec& ligand_coord = coord_pair.second;
                         double d2 = vec_distance_sqr(ligand_coord, gp);
                         double d = std::sqrt(d2);
-                        E += lj_soft_cutoff(d, radius, LJ_A, LJ_B); 
+                        E_per_reflig[ref_idx] += lj_soft_cutoff(d, radius, LJ_A, LJ_B);
                     }
-                //  if (E != 0) E = E - 0.36;
-                    data(ix, iy, iz) = E;
+
+                    // Average over all reference ligands
+                    double E_avg = 0.0;
+                    for (size_t i = 0; i < num_ref_ligs; ++i) {
+                        E_avg += E_per_reflig[i];
+                    }
+                    E_avg /= static_cast<double>(num_ref_ligs);
+
+                    data(ix, iy, iz) = E_avg;
                 }
             }
-        }  
+        }
     }
 }
 

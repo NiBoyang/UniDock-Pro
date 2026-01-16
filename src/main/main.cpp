@@ -284,6 +284,7 @@ bug reporting, license agreements, and more information.      \n";
         std::string out_maps;
         std::vector<std::string> ligand_names;
         std::string ligand_index;  // path to a text file, containing paths to ligands files
+        std::string ligand_dir;    // directory containing pdbqt ligand files
         std::vector<std::string> batch_ligand_names;
         std::vector<std::string> gpu_batch_ligand_names;
         // SDF support removed
@@ -347,6 +348,8 @@ bug reporting, license agreements, and more information.      \n";
         // GPU Device id to use
         int device_id = 0;
 
+        std::vector<std::string> reference_ligand_names;  // multiple reference ligands
+
         options_description inputs("Input");
         inputs.add_options()("receptor", value<std::string>(&rigid_name),
                              "rigid part of the receptor (PDBQT or PDB)")(
@@ -354,8 +357,10 @@ bug reporting, license agreements, and more information.      \n";
             "ligand", value<std::vector<std::string> >(&ligand_names)->multitoken(),
             "ligand (PDBQT)")("ligand_index", value<std::string>(&ligand_index),
                               "file containing paths to ligands (PDBQT)")(
-            "reference_ligand", value<std::string>(),
-            "reference ligand for similarity-guided docking (PDBQT)")(
+            "ligand_dir", value<std::string>(&ligand_dir),
+            "directory containing ligands (PDBQT files)")(
+            "reference_ligand", value<std::vector<std::string> >(&reference_ligand_names)->multitoken(),
+            "reference ligand(s) for similarity-guided docking (PDBQT), supports multiple files")(
             "batch", value<std::vector<std::string> >(&batch_ligand_names)->multitoken(),
             "batch ligand (PDBQT)")(
             "gpu_batch", value<std::vector<std::string> >(&gpu_batch_ligand_names)->multitoken(),
@@ -572,35 +577,30 @@ bug reporting, license agreements, and more information.      \n";
 
 
         // 在程序逻辑部分添加模式判断
-        std::string reference_ligand_name;
         double reference_ligand_scale = 1.0;
         bool pure_docking = false;
         bool similarity_searching = false;
         bool hybrid_mode = false;
-        
-        // 获取reference_ligand参数
-        if (vm.count("reference_ligand")) {
-            reference_ligand_name = vm["reference_ligand"].as<std::string>();
-        }
-        
+
         // 获取权重参数
         if (vm.count("reference_ligand_scale")) {
             reference_ligand_scale = vm["reference_ligand_scale"].as<double>();
         }
-        
-        // 根据参数存在情况判断模式
-        if (vm.count("receptor") && !vm.count("reference_ligand")) {
+
+        // 根据参数存在情况判断模式 (reference_ligand_names is already populated)
+        bool has_reference_ligands = !reference_ligand_names.empty();
+        if (vm.count("receptor") && !has_reference_ligands) {
             pure_docking = true;
-        } else if (!vm.count("receptor") && !vm.count("maps") && vm.count("reference_ligand")) {
+        } else if (!vm.count("receptor") && !vm.count("maps") && has_reference_ligands) {
             similarity_searching = true;
             // no_refine = true;
-        } else if (vm.count("receptor") && vm.count("reference_ligand")) {
+        } else if (vm.count("receptor") && has_reference_ligands) {
             hybrid_mode = true;
         }
 
         // 修改原始验证逻辑，考虑reference_ligand的情况
         if (sf_name.compare("vina") == 0 || sf_name.compare("vinardo") == 0) {
-            if (!vm.count("receptor") && !vm.count("maps") && !vm.count("reference_ligand")) {
+            if (!vm.count("receptor") && !vm.count("maps") && !has_reference_ligands) {
                 std::cerr << desc_simple
                           << "ERROR: Either the receptor, affinity maps, or a reference ligand must be specified.\n";
                 exit(EXIT_FAILURE);
@@ -616,17 +616,27 @@ bug reporting, license agreements, and more information.      \n";
                 std::cout << "Mode: Pure docking\n";
             } else if (similarity_searching) {
                 std::cout << "Mode: Similarity searching\n";
-                std::cout << "Reference ligand: " << reference_ligand_name << "\n";
+                std::cout << "Reference ligands (" << reference_ligand_names.size() << "): ";
+                for (size_t i = 0; i < reference_ligand_names.size(); ++i) {
+                    if (i > 0) std::cout << ", ";
+                    std::cout << reference_ligand_names[i];
+                }
+                std::cout << "\n";
                 std::cout << "Reference ligand scale: " << reference_ligand_scale << "\n";
             } else if (hybrid_mode) {
                 std::cout << "Mode: Hybrid (docking + similarity)\n";
-                std::cout << "Reference ligand: " << reference_ligand_name << "\n";
+                std::cout << "Reference ligands (" << reference_ligand_names.size() << "): ";
+                for (size_t i = 0; i < reference_ligand_names.size(); ++i) {
+                    if (i > 0) std::cout << ", ";
+                    std::cout << reference_ligand_names[i];
+                }
+                std::cout << "\n";
                 std::cout << "Reference ligand scale: " << reference_ligand_scale << "\n";
             }
         }
 
         if (!vm.count("ligand") && !vm.count("batch") && !vm.count("gpu_batch")
-            && !vm.count("ligand_index")) {
+            && !vm.count("ligand_index") && !vm.count("ligand_dir")) {
             std::cerr << desc_simple << "\n\nERROR: Missing ligand(s).\n";
             exit(EXIT_FAILURE);
         } else if (vm.count("ligand") && (vm.count("batch") || vm.count("gpu_batch"))) {
@@ -673,6 +683,46 @@ bug reporting, license agreements, and more information.      \n";
             index_file.close();
         }
 
+        // read ligands from directory
+        if (vm.count("ligand_dir")) {
+            boost::filesystem::path dir_path(ligand_dir);
+            if (!boost::filesystem::exists(dir_path)) {
+                std::cerr << "ERROR: ligand_dir does not exist: " << ligand_dir << "\n";
+                exit(EXIT_FAILURE);
+            }
+            if (!boost::filesystem::is_directory(dir_path)) {
+                std::cerr << "ERROR: ligand_dir is not a directory: " << ligand_dir << "\n";
+                exit(EXIT_FAILURE);
+            }
+
+            std::vector<std::string> pdbqt_files;
+            for (boost::filesystem::directory_iterator it(dir_path);
+                 it != boost::filesystem::directory_iterator(); ++it) {
+                if (boost::filesystem::is_regular_file(*it)) {
+                    std::string ext = it->path().extension().string();
+                    if (ext == ".pdbqt") {
+                        pdbqt_files.push_back(it->path().string());
+                    }
+                }
+            }
+
+            // Sort files for reproducibility
+            std::sort(pdbqt_files.begin(), pdbqt_files.end());
+
+            if (pdbqt_files.empty()) {
+                std::cerr << "ERROR: No .pdbqt files found in ligand_dir: " << ligand_dir << "\n";
+                exit(EXIT_FAILURE);
+            }
+
+            for (const auto& f : pdbqt_files) {
+                gpu_batch_ligand_names.push_back(f);
+            }
+
+            if (verbosity > 0) {
+                std::cout << "Found " << pdbqt_files.size() << " ligands in " << ligand_dir << "\n";
+            }
+        }
+
         if (verbosity > 0) {
             std::cout << "Scoring function : " << sf_name << "\n";
             if (vm.count("receptor")) std::cout << "Rigid receptor: " << rigid_name << "\n";
@@ -715,7 +765,7 @@ bug reporting, license agreements, and more information.      \n";
         v.m_zero_guard = !no_zero_guard;  // disable zero-guard if --no_zero_guard is set
 
         if (similarity_searching || hybrid_mode) {
-            v.set_reference_ligand(reference_ligand_name);
+            v.set_reference_ligands(reference_ligand_names);
         }
 
         if (vm.count("receptor") || vm.count("flex")) v.set_receptor(rigid_name, flex_name);
@@ -782,7 +832,7 @@ bug reporting, license agreements, and more information.      \n";
                                     refine_step, local_only, true);
                 v.write_poses_gpu({out_name}, num_modes, energy_range);
             }
-        } else if (vm.count("gpu_batch") || vm.count("ligand_index")) {
+        } else if (vm.count("gpu_batch") || vm.count("ligand_index") || vm.count("ligand_dir")) {
             if (randomize_only) {
                 printf("Not available under gpu_batch mode.\n");
                 return 0;
