@@ -58,11 +58,18 @@ Run `./udp --help` for the full set of options. Minimal, reproducible examples a
 ### Input expectations
 
 * **Receptor:** `.pdbqt`
-* **Ligands:** `.pdbqt` listed in a text file (`--ligand_index`) with one path per line
+* **Ligands:** Two input methods are supported:
+  * A text file (`--ligand_index`) listing `.pdbqt` paths, one per line
+  * A directory (`--ligand_directory`) containing `.pdbqt` files
+* **Reference ligand(s) (for similarity searching or hybrid docking):**
+  * Single reference: `--reference_ligand ref.pdbqt`
+  * Multiple references (ensemble): `--reference_ligand ref1.pdbqt ref2.pdbqt ref3.pdbqt` (space-separated)
 * **Search box:** `--center_{x,y,z}` and `--size_{x,y,z}` in Å
 * **Output directory (optional):** `--dir <path>`
 
 ### Classical docking
+
+Using a ligand index file:
 
 ```bash
 ./udp \
@@ -74,7 +81,21 @@ Run `./udp --help` for the full set of options. Minimal, reproducible examples a
   --dir ./results
 ```
 
+Using a ligand directory:
+
+```bash
+./udp \
+  --receptor rec.pdbqt \
+  --ligand_directory ./ligands/ \
+  --center_x 0 --center_y 0 --center_z 0 \
+  --size_x 20 --size_y 20 --size_z 20 \
+  --search_mode balance \
+  --dir ./results
+```
+
 ### Ligand similarity searching
+
+With a single reference ligand:
 
 ```bash
 ./udp \
@@ -86,14 +107,41 @@ Run `./udp --help` for the full set of options. Minimal, reproducible examples a
   --dir ./results
 ```
 
+With multiple reference ligands (ensemble):
+
+```bash
+./udp \
+  --reference_ligand ref1.pdbqt ref2.pdbqt ref3.pdbqt \
+  --ligand_index ligand_index.txt \
+  --center_x 0 --center_y 0 --center_z 0 \
+  --size_x 20 --size_y 20 --size_z 20 \
+  --search_mode fast \
+  --dir ./results
+```
+
 ### Hybrid docking
 
 > **Important:** In **hybrid mode**, the `--reference_ligand` **must be provided in its co‑crystallized pose with the specified receptor**.
+
+With a single reference ligand:
 
 ```bash
 ./udp \
   --receptor rec.pdbqt \
   --reference_ligand ref.pdbqt \
+  --ligand_index ligand_index.txt \
+  --center_x 0 --center_y 0 --center_z 0 \
+  --size_x 20 --size_y 20 --size_z 20 \
+  --search_mode detail \
+  --dir ./results
+```
+
+With multiple reference ligands (ensemble):
+
+```bash
+./udp \
+  --receptor rec.pdbqt \
+  --reference_ligand ref1.pdbqt ref2.pdbqt ref3.pdbqt \
   --ligand_index ligand_index.txt \
   --center_x 0 --center_y 0 --center_z 0 \
   --size_x 20 --size_y 20 --size_z 20 \
@@ -115,12 +163,6 @@ From the repository’s `example/` directory:
   --search_mode balance \
   --dir ./results
 ```
-
----
-
-## License
-
-Distributed under the terms of the **Apache License 2.0**. See `LICENSE` for details.
 
 ---
 
