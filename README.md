@@ -6,9 +6,9 @@
 
 ## Citation & Preprint
 
-If you use UniDock‑Pro in academic work, please cite the Uni‑Dock paper above and our preprint:
+If you use UniDock‑Pro in academic work, please cite the Uni‑Dock paper above and our JCIM paper:
 
-* **UniDock‑Pro preprint:** [https://chemrxiv.org/engage/chemrxiv/article-details/689e7544728bf9025e86ce58](https://chemrxiv.org/engage/chemrxiv/article-details/689e7544728bf9025e86ce58)
+* **UniDock‑Pro:** https://pubs.acs.org/doi/full/10.1021/acs.jcim.5c02587
 
 ---
 
